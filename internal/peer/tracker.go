@@ -6,13 +6,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+
+	"github.com/vs-ude/btfl/internal/structs"
 )
 
 type Tracker struct {
-	URL        string
-	Peers      []string
-	ListenAddr string
+	URL      string
+	Peers    *structs.Peerlist
+	Identity *structs.Peer
 }
 
 func (t *Tracker) Update() error {
@@ -33,28 +36,23 @@ func (t *Tracker) Update() error {
 		body = append(body, buf[:curN]...)
 		n = n + curN
 	}
-	data := make(map[string]bool)
-	err = json.Unmarshal(body, &data)
+	t.Peers = structs.NewPeerList()
+	err = t.Peers.Unmarshal(body)
 	if err != nil {
 		return fmt.Errorf("unable to parse response body data from tracker\n%w", err)
 	}
-	t.Peers = make([]string, 0, 100)
-	for p := range data {
-		if p == t.ListenAddr {
-			continue
-		}
-		t.Peers = append(t.Peers, p)
-	}
-	fmt.Printf("Found %d peers: %v\n", len(t.Peers), t.Peers)
+	log.Default().Printf("Found %d peers: %s\n", t.Peers.Len(), t.Peers.String())
 	return nil
 }
 
 func (t *Tracker) Join() error {
-	_, err := http.Post(t.URL+"/join", "application/json", bytes.NewBufferString("{\"addr\": \""+t.ListenAddr+"\"}"))
+	id, _ := json.Marshal(t.Identity)
+	_, err := http.Post(t.URL+"/join", "application/json", bytes.NewBuffer(id))
 	return err
 }
 
 func (t *Tracker) Leave() error {
-	_, err := http.Post(t.URL+"/leave", "application/json", bytes.NewBufferString("{\"addr\": \""+t.ListenAddr+"\"}"))
+	id, _ := json.Marshal(t.Identity)
+	_, err := http.Post(t.URL+"/leave", "application/json", bytes.NewBuffer(id))
 	return err
 }

@@ -7,14 +7,15 @@ test-run: logs/ bin/test-runner bin/peer bin/tracker
 bin/test-runner: bin/ cmd/test-runner/*.go
 	go build $(GOFLAGS) -o bin/test-runner ./cmd/test-runner
 
-bin/peer: bin/ cmd/peer/*.go internal/peer/*.go
-	go build $(GOFLAGS) -o bin/peer ./cmd/peer
+cmd/peer/main.go: internal/peer/*.go
 
-bin/tracker: bin/ cmd/tracker/*.go internal/tracker/*.go
-	go build $(GOFLAGS) -o bin/tracker ./cmd/tracker
+cmd/tracker/main.go: internal/tracker/*.go
+
+bin/tracker bin/peer: bin/%: cmd/%/main.go bin/ internal/structs/*.go internal/logging/*.go
+	go build $(GOFLAGS) -o $@ ./cmd/$*
 
 %/:
-	mkdir -p $@/
+	mkdir -p $@
 
 clean:
 	rm -rf bin/ logs/
