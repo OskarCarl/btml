@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"sync"
 	"syscall"
 )
@@ -16,6 +17,8 @@ func main() {
 	var n int
 	flag.IntVar(&n, "n", 3, "Number of peers to spawn. Default is 3.")
 	flag.Parse()
+
+	log.Default().SetPrefix("[RUNNER] ")
 
 	done := make(chan bool, 1)
 	wgT := &sync.WaitGroup{}
@@ -70,7 +73,7 @@ func peer(i int, wg *sync.WaitGroup) {
 	}
 	defer logfile.Close()
 
-	t := exec.Command("bin/peer")
+	t := exec.Command("bin/peer", "-name", strconv.Itoa(i))
 	t.Stdout = logfile
 
 	if err = t.Run(); err != nil {

@@ -19,12 +19,17 @@ func main() {
 	logging.Logger.SetPrefix("[TRACKER]")
 	logging.Logger.Use()
 
-	done := make(chan os.Signal, 1)
-	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
-	go tracker.Serve(listenAddr)
+	done := make(chan int, 1)
+	go tracker.Serve(listenAddr, done)
 
-	<-done
-	log.Default().Println("Tracker is terminating.")
-	os.Exit(0)
+	select {
+	case <-sig:
+		log.Default().Println("Tracker is terminating.")
+		os.Exit(0)
+	case exitCode := <-done:
+		os.Exit(exitCode)
+	}
 }

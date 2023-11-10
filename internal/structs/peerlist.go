@@ -7,34 +7,34 @@ import (
 )
 
 type Peerlist struct {
-	list map[string]Peer
+	List map[string]Peer
 	sync.Mutex
 }
 
 func NewPeerList() *Peerlist {
 	return &Peerlist{
-		list: make(map[string]Peer),
+		List: make(map[string]Peer),
 	}
 }
 
 func (pl *Peerlist) Add(p *Peer) {
 	pl.Lock()
-	pl.list[p.String()] = *p
+	pl.List[p.String()] = *p
 	pl.Unlock()
 }
 
 func (pl *Peerlist) Remove(p *Peer) {
 	pl.Lock()
-	delete(pl.list, p.String())
+	delete(pl.List, p.String())
 	pl.Unlock()
 }
 
 func (pl *Peerlist) String() string {
-	return fmt.Sprintf("%v", pl.list)
+	return fmt.Sprintf("%v", pl.List)
 }
 
 func (pl *Peerlist) Len() int {
-	return len(pl.list)
+	return len(pl.List)
 }
 
 // Unmarshal parses the byte array into a Peerlist.
@@ -46,14 +46,14 @@ func (pl *Peerlist) Unmarshal(b []byte) error {
 		return err
 	}
 	pl.Lock()
-	pl.list = tmp
+	pl.List = tmp
 	pl.Unlock()
 	return nil
 }
 
 func (pl *Peerlist) Marshal() ([]byte, error) {
 	pl.Lock()
-	b, err := json.Marshal(pl.list)
+	b, err := json.Marshal(pl.List)
 	pl.Unlock()
 	return b, err
 }

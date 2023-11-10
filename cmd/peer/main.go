@@ -9,11 +9,17 @@ import (
 
 func main() {
 	var trackerURL string
+	var name string
 	flag.StringVar(&trackerURL, "trackerURL", "http://localhost:8080", "The URL of the tracker. Default is http://localhost:8080.")
+	flag.StringVar(&name, "name", "peer", "Name of the peer. Default is 'peer'.")
 	flag.Parse()
 
-	logging.Logger.SetPrefix("[PEER]")
+	logging.Logger.SetPrefix("[PEER " + name + "]")
 	logging.Logger.Use()
 
-	peer.Start(trackerURL)
+	c := &peer.Config{
+		Name:       name,
+		TrackerURL: trackerURL,
+	}
+	peer.Start(c)
 }

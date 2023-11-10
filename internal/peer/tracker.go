@@ -18,6 +18,23 @@ type Tracker struct {
 	Identity *structs.Peer
 }
 
+func (t *Tracker) Setup(c *Config) {
+	t.URL = c.TrackerURL
+	t.Identity = &structs.Peer{
+		Name:        c.Name,
+		Addr:        localPeer.localAddr.String(),
+		Proto:       structs.UDP,
+		Fingerprint: "abbabbaba",
+	}
+	t.Peers = structs.NewPeerList()
+
+	err := t.Join()
+	if err != nil {
+		log.Default().Printf("Error joining the tracker: %v\n", err)
+		return
+	}
+}
+
 func (t *Tracker) Update() error {
 	resp, err := http.Get(t.URL + "/list")
 	if err != nil {
@@ -36,7 +53,7 @@ func (t *Tracker) Update() error {
 		body = append(body, buf[:curN]...)
 		n = n + curN
 	}
-	t.Peers = structs.NewPeerList()
+	t.Peers = new(structs.Peerlist)
 	err = t.Peers.Unmarshal(body)
 	if err != nil {
 		return fmt.Errorf("unable to parse response body data from tracker\n%w", err)
