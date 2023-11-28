@@ -22,10 +22,9 @@ func (t *Tracker) Setup(c *Config) {
 	t.URL = c.TrackerURL
 	t.Identity = &structs.Peer{
 		Name:        c.Name,
-		Addr:        localPeer.localAddr.String(),
-		Proto:       structs.UDP,
 		Fingerprint: "abbabbaba",
 	}
+	t.Identity.Addr = localPeer.localAddr
 	t.Peers = structs.NewPeerList()
 
 	err := t.Join()
@@ -58,6 +57,7 @@ func (t *Tracker) Update() error {
 	if err != nil {
 		return fmt.Errorf("unable to parse response body data from tracker\n%w", err)
 	}
+	delete(t.Peers.List, t.Identity.Name)
 	log.Default().Printf("Found %d peers: %s\n", t.Peers.Len(), t.Peers.String())
 	return nil
 }

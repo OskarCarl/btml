@@ -1,0 +1,21 @@
+graph TB
+	start[Start]
+	wait[Sleep]
+	tracker["Update tracker peer list"]
+	pex["Look up peers from PeX"]
+	promote["Promote inactive peers"]
+	demote["Demote peers"]
+
+	d1{"len == n?"}
+	d2{"len == n?"}
+
+	start-->tracker
+	tracker-->d1
+	d1-->|yes|wait
+	d1-->|no|pex
+	pex-->d2
+	d2-->|yes|wait
+	d2-->|no|promote
+	promote-->wait
+	wait-->demote
+	demote-->tracker

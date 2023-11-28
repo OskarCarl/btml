@@ -1,9 +1,10 @@
 package structs
 
+import "net"
+
 type Peer struct {
-	Name,
-	Addr string
-	Proto       Protocol
+	Name        string
+	Addr        *net.UDPAddr
 	Fingerprint string
 }
 

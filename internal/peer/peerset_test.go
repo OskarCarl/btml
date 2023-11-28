@@ -39,9 +39,7 @@ func buildPeerSet() *peer.PeerSet {
 		}
 	}
 
-	ps := &peer.PeerSet{
-		Active: make(map[string]*peer.KnownPeer),
-	}
+	ps := peer.NewPeerSet()
 
 	for i := 0; i < 8; i++ {
 		n := strconv.Itoa(i)

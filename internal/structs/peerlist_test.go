@@ -1,6 +1,7 @@
 package structs_test
 
 import (
+	"net"
 	"testing"
 
 	s "github.com/vs-ude/btfl/internal/structs"
@@ -24,13 +25,13 @@ func TestMashallingReverse(t *testing.T) {
 	// verify
 	for key, peer := range output.List {
 		expect := input.List[key]
-		if peer != expect {
+		if !equal(t, &peer, &expect) {
 			t.Error("peerlists are not equal")
 		}
 	}
 	for key, peer := range input.List {
 		expect := output.List[key]
-		if peer != expect {
+		if !equal(t, &peer, &expect) {
 			t.Error("peerlists are not equal")
 		}
 	}
@@ -52,20 +53,45 @@ func TestUnmarshalShouldError(t *testing.T) {
 }
 
 func buildInput() *s.Peerlist {
+	addr1, _ := net.ResolveUDPAddr("udp", ":43439")
+	addr2, _ := net.ResolveUDPAddr("udp", "localhost:62123")
 	return &s.Peerlist{
 		List: map[string]s.Peer{
 			"a": {
 				Name:        "a",
-				Addr:        "localhost:32453",
-				Proto:       s.UDP,
+				Addr:        addr1,
 				Fingerprint: "akljsdh",
 			},
 			"b": {
 				Name:        "b",
-				Addr:        "localhost:62123",
-				Proto:       s.TCP,
+				Addr:        addr2,
 				Fingerprint: "lkjajf",
 			},
 		},
 	}
+}
+
+func equal(t *testing.T, a, b *s.Peer) bool {
+	ret := true
+	if a.Name != b.Name {
+		t.Logf("Names do not match: %s != %s", a.Name, b.Name)
+		ret = false
+	}
+	if a.Fingerprint != b.Fingerprint {
+		t.Logf("Fingerprints do not match: %s != %s", a.Fingerprint, b.Fingerprint)
+		ret = false
+	}
+	if !a.Addr.IP.Equal(b.Addr.IP) {
+		t.Logf("Addr.IPs do not match: %v != %v", a.Addr.IP, b.Addr.IP)
+		ret = false
+	}
+	if a.Addr.Port != b.Addr.Port {
+		t.Logf("Addr.Ports do not match: %d != %d", a.Addr.Port, b.Addr.Port)
+		ret = false
+	}
+	if a.Addr.Zone != b.Addr.Zone {
+		t.Logf("Addr.Zones do not match: %s != %s", a.Addr.Zone, b.Addr.Zone)
+		ret = false
+	}
+	return ret
 }

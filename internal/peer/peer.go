@@ -24,22 +24,24 @@ func Start(c *Config) {
 	localPeer.peerset = NewPeerSet()
 	wg.Add(1)
 	go localPeer.Listen(wg, quit)
+	wg.Add(1)
+	outgoingDataChan := make(chan []byte, 20)
+	go localPeer.Outgoing(outgoingDataChan, wg, quit)
 
-	ping()
+	ping(outgoingDataChan)
+	time.Sleep(time.Second * 10)
 	close(quit)
 	wg.Wait()
 }
 
-func ping() {
+func ping(dc chan []byte) {
 	for len(localPeer.tracker.Peers.List) < 1 {
 		time.Sleep(time.Second * 2)
 	}
 	for _, p := range localPeer.tracker.Peers.List {
-		localPeer.peerset.Add(&p) // FIXME: This something is broken here, we get a nil pointer?
-		kp := localPeer.peerset.Active["0"]
-		kp.Connect()
-		kp.C.Send([]byte{0xff, 0xaf})
+		localPeer.peerset.Add(&p)
 	}
+	dc <- []byte{0xff, 0xaf}
 }
 
 func periodicUpdate(t *Tracker, wg *sync.WaitGroup, done chan bool) {

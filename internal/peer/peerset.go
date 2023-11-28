@@ -2,17 +2,11 @@ package peer
 
 import (
 	"fmt"
-	"net"
 	"slices"
 
 	"github.com/vs-ude/btfl/internal/structs"
 	"github.com/vs-ude/btfl/internal/trust"
 )
-
-type dataPacket struct {
-	data []byte
-	from net.Addr
-}
 
 type ErrPeerInactive error
 
@@ -28,7 +22,6 @@ const (
 type KnownPeer struct {
 	S trust.Score
 	P *structs.Peer
-	C PeerConnection // Do not persist this
 }
 
 type PeerSet struct {
@@ -49,7 +42,6 @@ func (ps *PeerSet) Add(p *structs.Peer) error {
 		e.P = &structs.Peer{
 			Name:        n.Name,
 			Addr:        n.Addr,
-			Proto:       n.Proto,
 			Fingerprint: n.Fingerprint,
 		}
 	}
