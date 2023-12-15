@@ -13,7 +13,7 @@ import (
 
 func main() {
 	var listenAddr string
-	flag.StringVar(&listenAddr, "ListenAddress", "localhost:8080", "The address the tracker listens on. Default: localhost:8080")
+	flag.StringVar(&listenAddr, "ListenAddress", "127.0.0.1:8080", "The address the tracker listens on. Default: 127.0.0.1:8080")
 	flag.Parse()
 
 	logging.Logger.SetPrefix("[TRACKER]")

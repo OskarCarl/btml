@@ -1,7 +1,9 @@
 package peer
 
 import (
+	"crypto/rand"
 	"log"
+	"math/big"
 	"sync"
 	"time"
 )
@@ -15,7 +17,7 @@ func Start(c *Config) {
 	tracker := new(Tracker)
 	tracker.Setup(c)
 
-	quit := make(chan bool, 1)
+	quit := make(chan struct{})
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go periodicUpdate(tracker, wg, quit)
@@ -28,23 +30,29 @@ func Start(c *Config) {
 	outgoingDataChan := make(chan []byte, 20)
 	go localPeer.Outgoing(outgoingDataChan, wg, quit)
 
-	ping(outgoingDataChan)
-	time.Sleep(time.Second * 10)
-	close(quit)
-	wg.Wait()
-}
-
-func ping(dc chan []byte) {
 	for len(localPeer.tracker.Peers.List) < 1 {
 		time.Sleep(time.Second * 2)
 	}
 	for _, p := range localPeer.tracker.Peers.List {
 		localPeer.peerset.Add(&p)
 	}
-	dc <- []byte{0xff, 0xaf}
+
+	go ping(outgoingDataChan)
+
+	time.Sleep(time.Second * 60)
+	close(quit)
+	wg.Wait()
 }
 
-func periodicUpdate(t *Tracker, wg *sync.WaitGroup, done chan bool) {
+func ping(dc chan []byte) {
+	for {
+		wait, _ := rand.Int(rand.Reader, big.NewInt(5))
+		time.Sleep(time.Second * time.Duration(big.NewInt(0).Add(wait, big.NewInt(2)).Int64()))
+		dc <- []byte{0xff, 0xaf}
+	}
+}
+
+func periodicUpdate(t *Tracker, wg *sync.WaitGroup, done chan struct{}) {
 	defer wg.Done()
 	timer := time.NewTimer(time.Second)
 	for {

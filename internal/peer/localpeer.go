@@ -1,6 +1,7 @@
 package peer
 
 import (
+	"errors"
 	"log"
 	"net"
 	"sync"
@@ -32,20 +33,25 @@ func (l *LocalPeer) Setup() {
 	log.Default().Printf("Listening on %s", l.localAddr.String())
 }
 
-func (l *LocalPeer) Listen(wg *sync.WaitGroup, quit chan bool) {
-	defer wg.Done()
+func (l *LocalPeer) Listen(wg *sync.WaitGroup, quit chan struct{}) {
+	defer func() {
+		l.server.Close()
+		wg.Done()
+	}()
 	var (
 		dchan = make(chan incomingPacket, 10)
 		d     incomingPacket
 	)
 
 	go l.listen(dchan)
-	select {
-	case <-quit:
-		l.server.Close()
-		return
-	case d = <-dchan:
-		log.Default().Printf("Received packet from %s with len %d", d.from, len(d.data))
+	for {
+		select {
+		case <-quit:
+			log.Default().Print("Stopping the listener...")
+			return
+		case d = <-dchan:
+			log.Default().Printf("Received packet from %s with len %d", d.from, len(d.data))
+		}
 	}
 }
 
@@ -54,9 +60,14 @@ func (l *LocalPeer) listen(dchan chan incomingPacket) {
 	for {
 		n, addr, err := l.server.ReadFrom(p)
 		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				return
+			}
 			log.Default().Printf("Error when reading packet from %s: %v", addr, err)
+			log.Default().Print("Continuing...")
 		}
 		d := make([]byte, n)
+		log.Default().Print("Got packet")
 		copy(d, p[:n])
 		packet := incomingPacket{
 			from: addr,
@@ -66,7 +77,8 @@ func (l *LocalPeer) listen(dchan chan incomingPacket) {
 	}
 }
 
-func (l *LocalPeer) Outgoing(dc chan []byte, wg *sync.WaitGroup, quit chan bool) {
+func (l *LocalPeer) Outgoing(dc chan []byte, wg *sync.WaitGroup, quit chan struct{}) {
+	defer wg.Done()
 	var (
 		d   []byte
 		err error

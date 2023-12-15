@@ -9,9 +9,11 @@ import (
 	"strconv"
 	"sync"
 	"syscall"
+	"time"
 )
 
 const LOGPATH string = "logs/"
+const TRACKER_URL string = "127.0.0.1:8923"
 
 func main() {
 	var n int
@@ -20,11 +22,12 @@ func main() {
 
 	log.Default().SetPrefix("[RUNNER] ")
 
-	done := make(chan bool, 1)
+	done := make(chan struct{})
 	wgT := &sync.WaitGroup{}
 	wgT.Add(1)
 	go tracker(done, wgT)
 
+	time.Sleep(time.Second * 1)
 	wgP := &sync.WaitGroup{}
 	for i := 0; i < n; i++ {
 		wgP.Add(1)
@@ -32,11 +35,11 @@ func main() {
 	}
 
 	wgP.Wait()
-	done <- true
+	close(done)
 	wgT.Wait()
 }
 
-func tracker(done chan bool, wg *sync.WaitGroup) {
+func tracker(done chan struct{}, wg *sync.WaitGroup) {
 	defer wg.Done()
 	logfile, err := os.Create(LOGPATH + "tracker.log")
 	if err != nil {
@@ -44,7 +47,7 @@ func tracker(done chan bool, wg *sync.WaitGroup) {
 	}
 	defer logfile.Close()
 
-	t := exec.Command("bin/tracker")
+	t := exec.Command("bin/tracker", "-ListenAddress", TRACKER_URL)
 	t.Stdout = logfile
 	t.Stderr = os.Stderr
 
@@ -73,7 +76,7 @@ func peer(i int, wg *sync.WaitGroup) {
 	}
 	defer logfile.Close()
 
-	t := exec.Command("bin/peer", "-name", strconv.Itoa(i))
+	t := exec.Command("bin/peer", "-name", strconv.Itoa(i), "-trackerURL", "http://"+TRACKER_URL)
 	t.Stdout = logfile
 
 	if err = t.Run(); err != nil {
