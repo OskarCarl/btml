@@ -88,8 +88,8 @@ func (l *LocalPeer) Outgoing(dc chan []byte, wg *sync.WaitGroup, quit chan struc
 		case <-quit:
 			return
 		case d = <-dc:
-			n := 0
 			for name, peer := range l.peerset.Active {
+				n := 0
 				log.Default().Printf("Sending data to %s: %v", name, d)
 				for n < len(d) {
 					n, err = l.server.WriteTo(d, peer.P.Addr)
