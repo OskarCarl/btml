@@ -90,7 +90,7 @@ func (l *LocalPeer) Outgoing(dc chan []byte, wg *sync.WaitGroup, quit chan struc
 		case d = <-dc:
 			for name, peer := range l.peerset.Active {
 				n := 0
-				log.Default().Printf("Sending data to %s: %v", name, d)
+				log.Default().Printf("Sending data to %s with len %d", name, len(d))
 				for n < len(d) {
 					n, err = l.server.WriteTo(d, peer.P.Addr)
 					// We might get an error here during shutdown when the server is closed by the listener.
