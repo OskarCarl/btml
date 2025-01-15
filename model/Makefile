@@ -10,6 +10,8 @@ docker-run-cpu: logs/
 
 docker-run-amd: logs/
 	docker run $(DOCKERFLAGS) $(DOCKER_GPUFLAGS) $(GPU_IMAGE) python main.py
+docker-prepare-data: data/prepared/
+	docker run $(DOCKERFLAGS) $(IMAGE) python tools/data.py --output-dir data/prepared --num-splits 100
 
 setup: venv/
 	./venv/bin/pip install -r requirements.txt
@@ -17,8 +19,8 @@ setup: venv/
 venv/:
 	python -m venv ./venv
 
-logs/:
-	mkdir -p logs/
+%/:
+	mkdir -p $@
 
 clean:
 	rm -rf venv/
@@ -28,4 +30,4 @@ reset:
 	rm -f logs/*.log
 	rm -f logs/*.done
 
-.PHONY: run docker-runall docker-runall-gpu setup clean reset
+.PHONY: run docker-run-cpu docker-run-amd docker-prepare-data setup venv clean reset
