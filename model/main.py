@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import torch
+import torch, argparse
 from torch import nn
 
 from config import DEVICE, BATCH_SIZE, EPOCHS, LEARNING_RATE
@@ -10,8 +10,14 @@ from training import train, test, NeuralNetwork
 def main():
     print(f"Using {DEVICE} device")
 
+    parser = argparse.ArgumentParser(description="Small neural network for fMNIST")
+    parser.add_argument("--train-data", type=str, required=True, help="Path to training data file (.pt)")
+    parser.add_argument("--test-data", type=str, required=True, help="Path to test data file (.pt)")
+    args = parser.parse_args()
+
     # Setup data
-    train_dataloader, test_dataloader = create_data_loader(BATCH_SIZE)
+    print(f"Loading data from {args.train_data} and {args.test_data}")
+    train_dataloader, test_dataloader = create_data_loader(BATCH_SIZE, args.train_data, args.test_data)
     print_data_shape(test_dataloader)
 
     # Initialize model
