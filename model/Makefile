@@ -8,14 +8,17 @@ DOCKER_GPUFLAGS ?= $(DOCKER_GPU_VERSION_OVERRIDE) --device=/dev/kfd:rw --device=
 PEER_ID ?= 0
 MODEL_CMDLINE ?= --train-data data/prepared/fMNIST_train_split_$(PEER_ID).pt --test-data data/prepared/fMNIST_test_split_$(PEER_ID).pt
 
-docker-run-cpu: logs/
+docker-run-cpu: logs/ peer_model_pb2.py
 	docker run $(DOCKERFLAGS) $(IMAGE) python main.py $(MODEL_CMDLINE)
 
-docker-run-amd: logs/
+docker-run-amd: logs/ peer_model_pb2.py
 	docker run $(DOCKERFLAGS) $(DOCKER_GPUFLAGS) $(GPU_IMAGE) python main.py $(MODEL_CMDLINE)
 
 docker-prepare-data: data/prepared/
 	docker run $(DOCKERFLAGS) $(IMAGE) python tools/data.py --output-dir data/prepared --num-splits 100
+
+peer_model_pb2.py: ../protocols/peer-model.proto
+	protoc --python_out=. -I../protocols/ peer-model.proto
 
 setup: venv/
 	./venv/bin/pip install -r requirements.txt
