@@ -2,13 +2,13 @@ import socket
 import os
 import io
 import torch
-from google.protobuf.internal.decoder import _DecodeVarint32
-from google.protobuf.internal.encoder import _EncodeVarint
+from google.protobuf.internal.decoder import _DecodeVarint32 #type: ignore
+from google.protobuf.internal.encoder import _EncodeVarint #type: ignore
 import peer_model_pb2
-from training import export_model_weights, import_model_weights
+from training import Model
 
 class ModelServer:
-    def __init__(self, model, socket_path):
+    def __init__(self, model: Model, socket_path: str):
         self.model = model
         self.socket_path = socket_path
 
@@ -29,7 +29,7 @@ class ModelServer:
             finally:
                 conn.close()
 
-    def _handle_connection(self, conn):
+    def _handle_connection(self, conn: socket.socket):
         """Handle a single connection."""
         while True:
             # Read message length (varint)
@@ -48,24 +48,23 @@ class ModelServer:
                 break
 
             # Parse request
-            request = peer_model_pb2.ModelRequest()
+            request = peer_model_pb2.ModelRequest() #type: ignore
             request.ParseFromString(data)
 
             # Create response
-            response = peer_model_pb2.ModelResponse()
+            response = peer_model_pb2.ModelResponse() #type: ignore
 
             # Handle request
             if request.HasField('export_weights'):
                 weights_buffer = io.BytesIO()
-                torch.save(export_model_weights(self.model), weights_buffer)
+                torch.save(self.model.export_model_weights(), weights_buffer)
                 response.success = True
                 response.weights = weights_buffer.getvalue()
 
             elif request.HasField('import_weights'):
                 try:
                     weights = torch.load(io.BytesIO(request.import_weights.weights))
-                    import_model_weights(
-                        self.model,
+                    self.model.import_model_weights(
                         weights,
                         request.import_weights.weight_ratio
                     )
