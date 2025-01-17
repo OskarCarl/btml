@@ -1,3 +1,4 @@
+import logging
 from torch.utils.data import TensorDataset, DataLoader
 import torch
 
@@ -23,6 +24,6 @@ def create_data_loader(batch_size: int, train_path: str, test_path: str) -> tupl
 
 def print_data_shape(dataloader: DataLoader):
     for X, y in dataloader:
-        print(f"Shape of X [N, C, H, W]: {X.shape}")
-        print(f"Shape of y: {y.shape} {y.dtype}")
+        logging.info(f"Shape of X [N, C, H, W]: {X.shape}")
+        logging.info(f"Shape of y: {y.shape} {y.dtype}")
         break

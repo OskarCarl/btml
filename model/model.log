@@ -1,0 +1,15 @@
+2025-01-17 17:26:44,720 - INFO - Using cpu device
+2025-01-17 17:26:44,720 - INFO - Loading data from data/prepared/fMNIST_train_split_42.pt and data/prepared/fMNIST_test_split_42.pt
+2025-01-17 17:26:44,731 - INFO - Shape of X [N, C, H, W]: torch.Size([64, 1, 28, 28])
+2025-01-17 17:26:44,731 - INFO - Shape of y: torch.Size([64]) torch.int64
+2025-01-17 17:26:44,732 - INFO - Initialized new model: NeuralNetwork(
+  (flatten): Flatten(start_dim=1, end_dim=-1)
+  (linear_relu_stack): Sequential(
+    (0): Linear(in_features=784, out_features=100, bias=True)
+    (1): ReLU()
+    (2): Linear(in_features=100, out_features=100, bias=True)
+    (3): ReLU()
+    (4): Linear(in_features=100, out_features=10, bias=True)
+  )
+)
+2025-01-17 17:26:45,444 - INFO - Listening on /tmp/btfl-model-1737134802785495574.sock

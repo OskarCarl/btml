@@ -1,3 +1,5 @@
+import logging
+import torch
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
@@ -30,7 +32,7 @@ class Model:
 
     def __init__(self, train_dataloader: DataLoader, test_dataloader: DataLoader):
         self.model = NeuralNetwork().to(DEVICE)
-        print(f"Initialized new model: {self.model}")
+        logging.info(f"Initialized new model: {self.model}")
 
         # Setup training
         self.loss_fn = nn.CrossEntropyLoss()
@@ -56,7 +58,7 @@ class Model:
 
             if batch % 100 == 0:
                 loss, current = loss.item(), (batch + 1) * len(X)
-                print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+                logging.info(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
 
     def test(self):
         size = len(self.test_dataloader.dataset) #type: ignore
@@ -71,7 +73,7 @@ class Model:
                 correct += (pred.argmax(1) == y).type(torch.float).sum().item()
         test_loss /= num_batches
         correct /= size
-        print(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+        logging.info(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
 
     def export_model_weights(self):
         """Export model weights as a state dict."""

@@ -1,6 +1,5 @@
-import socket
-import os
-import io
+import logging, io, os, socket
+
 import torch
 from google.protobuf.internal.decoder import _DecodeVarint32 #type: ignore
 from google.protobuf.internal.encoder import _EncodeVarint #type: ignore
@@ -20,7 +19,7 @@ class ModelServer:
         server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         server.bind(self.socket_path)
         server.listen(1)
-        print(f"Listening on {self.socket_path}")
+        logging.info(f"Listening on {self.socket_path}")
 
         while True:
             conn, addr = server.accept()

@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package model;
 
+option go_package = "/internal/model";
+
 // Request message sent to the model
 message ModelRequest {
   oneof request {
