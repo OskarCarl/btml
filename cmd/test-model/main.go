@@ -21,7 +21,7 @@ func main() {
 		"python3",
 		"data/prepared/fMNIST_train_split_42.pt",
 		"data/prepared/fMNIST_test_split_42.pt",
-		true,
+		"logs/model.log",
 	)
 	if err != nil {
 		log.Printf("Failed to create model: %v", err)
