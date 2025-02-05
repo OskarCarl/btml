@@ -5,3 +5,4 @@ venv/
 
 *_pb2.py
 .docker-build
+.setup

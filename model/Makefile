@@ -11,23 +11,26 @@ MODEL_CMDLINE ?= --train-data data/prepared/fMNIST_train_split_$(PEER_ID).pt --t
 test: .docker-build
 	$(MAKE) docker-run-cpu MODEL_CMDLINE="$(MODEL_CMDLINE) --oneshot"
 
-docker-run-cpu: logs/ peer_model_pb2.py .docker-build
+docker-run-cpu: logs/ lib/model.py .docker-build
 	docker run $(DOCKERFLAGS) $(IMAGE) python main.py $(MODEL_CMDLINE)
 
-docker-run-amd: logs/ peer_model_pb2.py
+docker-run-amd: logs/ lib/model.py
 	docker run $(DOCKERFLAGS) $(DOCKER_GPUFLAGS) $(GPU_IMAGE) python main.py $(MODEL_CMDLINE)
 
 docker-prepare-data: data/prepared/
 	docker run $(DOCKERFLAGS) $(IMAGE) python tools/data.py --output-dir data/prepared --num-splits 100
 
-peer_model_pb2.py: ../protocols/peer-model.proto
-	protoc --python_out=. -I../protocols/ peer-model.proto
+lib/model.py: lib/ ../protocols/peer-model.proto venv/bin/protoc-gen-python_betterproto
+	protoc --plugin=venv/bin/protoc-gen-python_betterproto --python_betterproto_out=./lib/ -I../protocols/ peer-model.proto
 
-setup: venv/
-	./venv/bin/pip install -r requirements.txt
+venv/bin/protoc-gen-python_betterproto: .setup
+
+.setup: venv/ requirements.txt requirements-dev.txt
+	./venv/bin/pip install -r requirements.txt -r requirements-dev.txt
+	echo "$(shell date --iso=seconds)" > .setup
 
 .docker-build: Dockerfile
-	docker build -t btfl-model:latest .
+	docker build -t $(IMAGE):latest .
 	echo "$(shell date --iso=seconds)" > .docker-build
 
 venv/:
@@ -44,4 +47,4 @@ reset:
 	rm -f logs/*.log
 	rm -f logs/*.done
 
-.PHONY: run docker-run-cpu docker-run-amd docker-prepare-data setup venv clean reset
+.PHONY: run docker-run-cpu docker-run-amd docker-prepare-data clean reset

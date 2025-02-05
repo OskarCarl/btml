@@ -2,6 +2,7 @@ import logging
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
+from typing import Dict, Any
 
 from config import DEVICE, LEARNING_RATE
 
@@ -40,8 +41,15 @@ class Model:
         self.train_dataloader = train_dataloader
         self.test_dataloader = test_dataloader
 
-    def train(self):
+    def train(self) -> float:
+        """
+        Trains the model for an epoch.
+
+        Returns:
+            float: The average loss over all batches
+        """
         size = len(self.train_dataloader.dataset) #type: ignore
+        losses = []
         self.model.train()
         for batch, (X, y) in enumerate(self.train_dataloader):
             X, y = X.to(DEVICE), y.to(DEVICE)
@@ -58,8 +66,17 @@ class Model:
             if batch % 100 == 0:
                 loss, current = loss.item(), (batch + 1) * len(X)
                 logging.info(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+                losses += [loss]
+        return sum(losses)/len(losses)
 
-    def test(self):
+    def test(self) -> tuple[float, float]:
+        """
+        Evaluates the model.
+
+        Returns:
+            float: accuracy
+            float: loss
+        """
         size = len(self.test_dataloader.dataset) #type: ignore
         num_batches = len(self.test_dataloader)
         self.model.eval()
@@ -73,8 +90,9 @@ class Model:
         test_loss /= num_batches
         correct /= size
         logging.info(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
+        return 100*correct, test_loss
 
-    def export_model_weights(self):
+    def export_model_weights(self) -> Dict[str, Any]:
         """Export model weights as a state dict."""
         return self.model.state_dict()
 

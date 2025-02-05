@@ -15,7 +15,7 @@ test-go:
 bin/test-runner: bin/ cmd/test-runner/*.go
 	go build $(GOFLAGS) -o bin/test-runner ./cmd/test-runner
 
-bin/test-model: bin/ cmd/test-model/*.go internal/model/*.go
+bin/test-model: bin/ cmd/test-model/*.go internal/model/*.go internal/model/peer-model.pb.go
 	go build $(GOFLAGS) -o bin/test-model ./cmd/test-model
 
 cmd/peer/main.go: internal/peer/*.go internal/model/*.go internal/trust/*.go internal/model/peer-model.pb.go

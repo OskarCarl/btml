@@ -31,16 +31,20 @@ func (m *SimpleModel) Close() error {
 }
 
 func (m *SimpleModel) Eval() error {
-	if err := m.client.Eval(); err != nil {
+	met, err := m.client.Eval()
+	if err != nil {
 		return fmt.Errorf("failed to evaluate model: %w", err)
 	}
-	return m.client.Eval()
+	log.Default().Printf("Evaluated model; acc: %f, loss: %f", met.acc, met.loss)
+	return nil
 }
 
 func (m *SimpleModel) Train() error {
-	if err := m.client.Train(); err != nil {
+	met, err := m.client.Train()
+	if err != nil {
 		return fmt.Errorf("failed to train model: %w", err)
 	}
+	log.Default().Printf("Trained model; loss: %f", met.loss)
 	return nil
 }
 

@@ -25,19 +25,13 @@ message TrainRequest {}
 
 message EvalRequest {}
 
-message TrainResponse {
-  float loss = 1;
-  float accuracy = 2;
-}
-
-message EvalResponse {
-  float loss = 1;
-  float accuracy = 2;
-}
+message Ack {}
 
 // Response message from the model
 message ModelResponse {
   bool success = 1;
   string error_message = 2;  // Only set if success = false
   bytes weights = 3;  // Only set for export_weights response
+  float loss = 4;  // Only set for train and eval
+  float accuracy = 5;  // Only set for eval
 }

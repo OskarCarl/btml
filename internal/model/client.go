@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os/exec"
+	"time"
 
 	"google.golang.org/protobuf/proto"
 )
@@ -24,42 +25,42 @@ func (c *ModelClient) Close() error {
 	return nil
 }
 
-func (c *ModelClient) Train() error {
+func (c *ModelClient) Train() (*Metrics, error) {
 	req := &ModelRequest{
 		Request: &ModelRequest_Train{
 			Train: &TrainRequest{},
 		},
 	}
 
-	resp, err := c.sendRequest(req)
+	err := c.sendRequest(req)
 	if err != nil {
-		return fmt.Errorf("train request failed: %w", err)
+		return nil, fmt.Errorf("train request failed: %w", err)
 	}
 
-	if !resp.Success {
-		return fmt.Errorf("train failed: %s", resp.ErrorMessage)
+	res, err := c.readResponse(20)
+	if err != nil {
+		return nil, fmt.Errorf("train request failed: %w", err)
 	}
-
-	return nil
+	return NewMetrics(-1, res.Loss)
 }
 
-func (c *ModelClient) Eval() error {
+func (c *ModelClient) Eval() (*Metrics, error) {
 	req := &ModelRequest{
 		Request: &ModelRequest_Eval{
 			Eval: &EvalRequest{},
 		},
 	}
 
-	resp, err := c.sendRequest(req)
+	err := c.sendRequest(req)
 	if err != nil {
-		return fmt.Errorf("eval request failed: %w", err)
+		return nil, fmt.Errorf("eval request failed: %w", err)
 	}
 
-	if !resp.Success {
-		return fmt.Errorf("eval failed: %s", resp.ErrorMessage)
+	res, err := c.readResponse(5)
+	if err != nil {
+		return nil, fmt.Errorf("eval request failed: %w", err)
 	}
-
-	return nil
+	return NewMetrics(-1, res.Loss)
 }
 
 func (c *ModelClient) Apply(weights Weights) error {
@@ -72,13 +73,9 @@ func (c *ModelClient) Apply(weights Weights) error {
 		},
 	}
 
-	resp, err := c.sendRequest(req)
+	err := c.sendRequest(req)
 	if err != nil {
 		return fmt.Errorf("import weights request failed: %w", err)
-	}
-
-	if !resp.Success {
-		return fmt.Errorf("import weights failed: %s", resp.ErrorMessage)
 	}
 
 	return nil
@@ -91,53 +88,82 @@ func (c *ModelClient) GetWeights() (Weights, error) {
 		},
 	}
 
-	resp, err := c.sendRequest(req)
+	err := c.sendRequest(req)
 	if err != nil {
 		return nil, fmt.Errorf("export weights request failed: %w", err)
 	}
 
-	if !resp.Success {
-		return nil, fmt.Errorf("export weights failed: %s", resp.ErrorMessage)
+	res, err := c.readResponse(5)
+	if err != nil {
+		return nil, fmt.Errorf("export weights request failed: %w", err)
 	}
-
-	return NewSimpleWeights(resp.Weights)
+	return NewSimpleWeights(res.Weights)
 }
 
-func (c *ModelClient) sendRequest(req *ModelRequest) (*ModelResponse, error) {
+func (c *ModelClient) sendRequest(req *ModelRequest) error {
 	data, err := proto.Marshal(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
+		return fmt.Errorf("failed to marshal request: %w", err)
 	}
 
 	// Write length-prefixed message
 	buf := make([]byte, binary.MaxVarintLen64)
 	n := binary.PutUvarint(buf, uint64(len(data)))
 	if _, err := c.conn.Write(buf[:n]); err != nil {
-		return nil, fmt.Errorf("failed to write message length: %w", err)
+		return fmt.Errorf("failed to write message length: %w", err)
 	}
 	if _, err := c.conn.Write(data); err != nil {
-		return nil, fmt.Errorf("failed to write message: %w", err)
+		return fmt.Errorf("failed to write message: %w", err)
 	}
 
 	// Read response length
-	respLen, err := binary.ReadUvarint(newConnReader(c.conn))
+	ackLen, err := binary.ReadUvarint(newConnReader(c.conn))
 	if err != nil {
-		return nil, fmt.Errorf("failed to read response length: %w", err)
+		return fmt.Errorf("failed to read ack length: %w", err)
 	}
 
 	// Read response data
-	respData := make([]byte, respLen)
-	if _, err := io.ReadFull(c.conn, respData); err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
+	ackData := make([]byte, ackLen)
+	if _, err := io.ReadFull(c.conn, ackData); err != nil {
+		return fmt.Errorf("failed to read ack: %w", err)
 	}
 
-	// Unmarshal response
-	var resp ModelResponse
-	if err := proto.Unmarshal(respData, &resp); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	// Unmarshal ack
+	var ack Ack
+	if err := proto.Unmarshal(ackData, &ack); err != nil {
+		return fmt.Errorf("failed to unmarshal ack: %w", err)
 	}
 
-	return &resp, nil
+	return nil
+}
+
+// readResponse waits for the response message for `timeout` seconds and returns it
+func (c *ModelClient) readResponse(timeout int) (*ModelResponse, error) {
+	packLen := make(chan uint64, 1)
+	go func() {
+		// FIXME: Seem like I'm doing something wrong here
+		l, err := binary.ReadUvarint(newConnReader(c.conn))
+		if err == nil {
+			packLen <- l
+		}
+	}()
+	select {
+	case <-time.After(time.Second * time.Duration(timeout)):
+		return nil, fmt.Errorf("timed out after %d seconds waiting for response", timeout)
+	case l := <-packLen:
+		// Read response data
+		resData := make([]byte, l)
+		if _, err := io.ReadFull(c.conn, resData); err != nil {
+			return nil, fmt.Errorf("failed to read response: %w", err)
+		}
+
+		// Unmarshal res
+		var res ModelResponse
+		if err := proto.Unmarshal(resData, &res); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+		}
+		return &res, nil
+	}
 }
 
 // connReader adapts a net.Conn to io.ByteReader for binary.ReadUvarint

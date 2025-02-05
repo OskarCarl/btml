@@ -1,10 +1,10 @@
 import logging, io, os, socket
 
+import betterproto
 import torch
-from google.protobuf.internal.decoder import _DecodeVarint32 #type: ignore
-from google.protobuf.internal.encoder import _EncodeVarint #type: ignore
-import peer_model_pb2
+
 from training import Model
+import lib.model as pb
 
 class ModelServer:
     def __init__(self, model: Model, socket_path: str):
@@ -28,15 +28,20 @@ class ModelServer:
             finally:
                 conn.close()
 
+    def _ack(self, conn: socket.socket):
+        ack = pb.Ack()
+        conn.send(bytes(ack))
+
     def _handle_connection(self, conn: socket.socket):
         """Handle a single connection."""
         while True:
+            logging.info("Waiting for command.")
             # Read message length (varint)
             buf = []
             while True:
                 buf.append(conn.recv(1))
                 try:
-                    msg_len, pos = _DecodeVarint32(b''.join(buf), 0)
+                    msg_len, pos = betterproto.decode_varint(b''.join(buf), 0)
                     break
                 except IndexError:
                     continue
@@ -45,34 +50,52 @@ class ModelServer:
             data = conn.recv(msg_len)
             if not data:
                 break
+            logging.info(f"Got message of length {len(data)}")
 
             # Parse request
-            request = peer_model_pb2.ModelRequest() #type: ignore
-            request.ParseFromString(data)
+            request = pb.ModelRequest().parse(data)
 
+            logging.info(f"Message: {request}")
             # Create response
-            response = peer_model_pb2.ModelResponse() #type: ignore
 
+            response = pb.ModelResponse(success=False)
             # Handle request
-            if request.HasField('export_weights'):
-                weights_buffer = io.BytesIO()
-                torch.save(self.model.export_model_weights(), weights_buffer)
-                response.success = True
-                response.weights = weights_buffer.getvalue()
-
-            elif request.HasField('import_weights'):
-                try:
-                    weights = torch.load(io.BytesIO(request.import_weights.weights))
-                    self.model.import_model_weights(
-                        weights,
-                        request.import_weights.weight_ratio
-                    )
+            t, values = betterproto.which_one_of(request, "request")
+            match t:
+                case "export_weights":
+                    self._ack(conn)
+                    weights_buffer = io.BytesIO()
+                    torch.save(self.model.export_model_weights(), weights_buffer)
                     response.success = True
-                except Exception as e:
-                    response.success = False
-                    response.error_message = str(e)
+                    response.weights = weights_buffer.getvalue()
+
+                case "import_weights":
+                    self._ack(conn)
+                    try:
+                        weights = torch.load(io.BytesIO(values.weights))
+                        self.model.import_model_weights(
+                            weights,
+                            values.weight_ratio
+                        )
+                        response.success = True
+                    except Exception as e:
+                        response.success = False
+                        response.error_message = str(e)
+
+                case "train":
+                    self._ack(conn)
+                    avg_loss = self.model.train()
+                    response.loss = avg_loss
+                    response.success = True
+
+                case "eval":
+                    self._ack(conn)
+                    accuracy, loss = self.model.test()
+                    response.accuracy = accuracy
+                    response.loss = loss
+                    response.success = True
 
             # Send response with length prefix
-            response_data = response.SerializeToString()
-            _EncodeVarint(conn.send, len(response_data))
+            response_data = bytes(response)
+            conn.send(betterproto.encode_varint(len(response_data)))
             conn.send(response_data)

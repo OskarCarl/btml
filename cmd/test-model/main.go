@@ -35,7 +35,6 @@ func main() {
 		log.Printf("Failed to train model: %v", err)
 		os.Exit(1)
 	}
-	log.Printf("Successfully trained model")
 
 	// Get initial weights
 	weights, err := m.GetWeights()
@@ -57,6 +56,5 @@ func main() {
 		log.Printf("Failed to evaluate model: %v", err)
 		os.Exit(1)
 	}
-	// log.Printf("Model evaluation score: %+v", score)
 
 }
