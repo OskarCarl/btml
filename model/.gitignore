@@ -2,6 +2,7 @@ __pycache__/
 data/*
 !data/prepared/
 venv/
+lib/model.py
 
 *_pb2.py
 .docker-build
