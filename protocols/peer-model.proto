@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package model;
 
-option go_package = "github.com/vs-ude/btfl/internal/model";
+option go_package = "internal/model";
 
 // Request message sent to the model
 message ModelRequest {
