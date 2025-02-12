@@ -25,10 +25,6 @@ message TrainRequest {}
 
 message EvalRequest {}
 
-message Ack {
-  bool success = 1;
-}
-
 // Response message from the model
 message ModelResponse {
   bool success = 1;
