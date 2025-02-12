@@ -19,12 +19,11 @@ bin/test-runner: bin/ cmd/test-runner/*.go
 bin/test-model: bin/ cmd/test-model/*.go internal/model/*.go internal/model/peer-model.pb.go
 	go build $(GOFLAGS) -o bin/test-model ./cmd/test-model
 
-cmd/peer/main.go: internal/peer/*.go internal/model/*.go internal/trust/*.go internal/model/peer-model.pb.go
+bin/tracker bin/peer: bin/ internal/structs/*.go internal/logging/*.go
+	go build $(GOFLAGS) -o $@ ./cmd/$(subst bin/,,$@)
 
-cmd/tracker/main.go: internal/tracker/*.go
-
-bin/tracker bin/peer: bin/%: cmd/%/main.go bin/ internal/structs/*.go internal/logging/*.go
-	go build $(GOFLAGS) -o $@ ./cmd/$*
+bin/tracker: cmd/tracker/*.go internal/tracker/*.go
+bin/peer: cmd/peer/*.go internal/peer/*.go internal/model/*.go internal/trust/*.go internal/model/peer-model.pb.go
 
 internal/model/peer-model.pb.go: protocols/peer-model.proto
 	protoc --go_out=. -Iprotocols/ peer-model.proto

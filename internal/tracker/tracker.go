@@ -21,7 +21,8 @@ func Serve(listenAddr string, done chan int) {
 	http.HandleFunc("/list", t.list)
 	http.HandleFunc("/join", t.join)
 	http.HandleFunc("/leave", t.leave)
-	log.Default().Println("Starting")
+	http.HandleFunc("/whoami", t.initPeer)
+	log.Default().Printf("Starting on http://%s", listenAddr)
 	log.Default().Println(http.ListenAndServe(listenAddr, nil))
 	done <- 1
 }
