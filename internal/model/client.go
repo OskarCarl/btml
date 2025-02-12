@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os/exec"
 	"time"
@@ -60,7 +61,7 @@ func (c *ModelClient) Eval() (*Metrics, error) {
 	if err != nil {
 		return nil, fmt.Errorf("eval request failed: %w", err)
 	}
-	return NewMetrics(-1, res.Loss)
+	return NewMetrics(res.Accuracy, res.Loss)
 }
 
 func (c *ModelClient) Apply(weights Weights) error {
@@ -78,6 +79,10 @@ func (c *ModelClient) Apply(weights Weights) error {
 		return fmt.Errorf("import weights request failed: %w", err)
 	}
 
+	_, err = c.readResponse(5)
+	if err != nil {
+		return fmt.Errorf("import weights request failed: %w", err)
+	}
 	return nil
 }
 
@@ -117,21 +122,9 @@ func (c *ModelClient) sendRequest(req *ModelRequest) error {
 	}
 
 	// Read response length
-	ackLen, err := binary.ReadUvarint(newConnReader(c.conn))
-	if err != nil {
-		return fmt.Errorf("failed to read ack length: %w", err)
-	}
-
-	// Read response data
-	ackData := make([]byte, ackLen)
-	if _, err := io.ReadFull(c.conn, ackData); err != nil {
-		return fmt.Errorf("failed to read ack: %w", err)
-	}
-
-	// Unmarshal ack
-	var ack Ack
-	if err := proto.Unmarshal(ackData, &ack); err != nil {
-		return fmt.Errorf("failed to unmarshal ack: %w", err)
+	ack, err := binary.ReadUvarint(newConnReader(c.conn))
+	if err != nil || ack != 42 {
+		return fmt.Errorf("failed to read ack: %d, %w", ack, err)
 	}
 
 	return nil
@@ -141,8 +134,8 @@ func (c *ModelClient) sendRequest(req *ModelRequest) error {
 func (c *ModelClient) readResponse(timeout int) (*ModelResponse, error) {
 	packLen := make(chan uint64, 1)
 	go func() {
-		// FIXME: Seem like I'm doing something wrong here
 		l, err := binary.ReadUvarint(newConnReader(c.conn))
+		log.Printf("Got response of len %d", l)
 		if err == nil {
 			packLen <- l
 		}
@@ -161,6 +154,9 @@ func (c *ModelClient) readResponse(timeout int) (*ModelResponse, error) {
 		var res ModelResponse
 		if err := proto.Unmarshal(resData, &res); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+		}
+		if !res.Success {
+			return nil, fmt.Errorf("got error from Python: %s", res.ErrorMessage)
 		}
 		return &res, nil
 	}

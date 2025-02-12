@@ -1,3 +1,4 @@
+from base64 import encode
 import logging, io, os, socket
 
 import betterproto
@@ -10,6 +11,7 @@ class ModelServer:
     def __init__(self, model: Model, socket_path: str):
         self.model = model
         self.socket_path = socket_path
+        self.conn: socket.socket | None = None
 
     def start(self):
         """Start the model server and handle connections."""
@@ -22,24 +24,26 @@ class ModelServer:
         logging.info(f"Listening on {self.socket_path}")
 
         while True:
-            conn, addr = server.accept()
+            self.conn, addr = server.accept()
             try:
-                self._handle_connection(conn)
+                self._handle_connection()
             finally:
-                conn.close()
+                self.conn.close()
 
-    def _ack(self, conn: socket.socket):
-        ack = pb.Ack()
-        conn.send(bytes(ack))
-
-    def _handle_connection(self, conn: socket.socket):
+    def _handle_connection(self):
         """Handle a single connection."""
+        assert self.conn is not None
+
+        def _ack():
+            assert self.conn is not None
+            self.conn.sendall(betterproto.encode_varint(42))
+
         while True:
             logging.info("Waiting for command.")
             # Read message length (varint)
             buf = []
             while True:
-                buf.append(conn.recv(1))
+                buf.append(self.conn.recv(1))
                 try:
                     msg_len, pos = betterproto.decode_varint(b''.join(buf), 0)
                     break
@@ -47,7 +51,7 @@ class ModelServer:
                     continue
 
             # Read the message
-            data = conn.recv(msg_len)
+            data = self.conn.recv(msg_len)
             if not data:
                 break
             logging.info(f"Got message of length {len(data)}")
@@ -55,22 +59,19 @@ class ModelServer:
             # Parse request
             request = pb.ModelRequest().parse(data)
 
-            logging.info(f"Message: {request}")
-            # Create response
-
-            response = pb.ModelResponse(success=False)
             # Handle request
+            response = pb.ModelResponse(success=False)
             t, values = betterproto.which_one_of(request, "request")
             match t:
                 case "export_weights":
-                    self._ack(conn)
+                    _ack()
                     weights_buffer = io.BytesIO()
                     torch.save(self.model.export_model_weights(), weights_buffer)
                     response.success = True
                     response.weights = weights_buffer.getvalue()
 
                 case "import_weights":
-                    self._ack(conn)
+                    _ack()
                     try:
                         weights = torch.load(io.BytesIO(values.weights))
                         self.model.import_model_weights(
@@ -83,13 +84,13 @@ class ModelServer:
                         response.error_message = str(e)
 
                 case "train":
-                    self._ack(conn)
+                    _ack()
                     avg_loss = self.model.train()
                     response.loss = avg_loss
                     response.success = True
 
                 case "eval":
-                    self._ack(conn)
+                    _ack()
                     accuracy, loss = self.model.test()
                     response.accuracy = accuracy
                     response.loss = loss
@@ -97,5 +98,6 @@ class ModelServer:
 
             # Send response with length prefix
             response_data = bytes(response)
-            conn.send(betterproto.encode_varint(len(response_data)))
-            conn.send(response_data)
+            logging.info("Sending response")
+            self.conn.send(betterproto.encode_varint(len(response_data)))
+            self.conn.send(response_data)

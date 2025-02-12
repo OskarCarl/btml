@@ -28,7 +28,7 @@ func main() {
 		os.Exit(1)
 	}
 	// Ensure cleanup on exit
-	defer m.(interface{ Close() error }).Close()
+	defer m.Close()
 
 	// Train the model
 	if err := m.Train(); err != nil {
@@ -42,14 +42,6 @@ func main() {
 		log.Printf("Failed to get weights: %v", err)
 		os.Exit(1)
 	}
-	log.Printf("Got initial weights of size: %d bytes", len(weights.Get()))
-
-	// Apply weights back
-	if err := m.Apply(weights); err != nil {
-		log.Printf("Failed to apply weights: %v", err)
-		os.Exit(1)
-	}
-	log.Printf("Successfully applied weights")
 
 	// Evaluate the model
 	if err := m.Eval(); err != nil {
@@ -57,4 +49,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Apply weights back
+	if err := m.Apply(weights); err != nil {
+		log.Printf("Failed to apply weights: %v", err)
+		os.Exit(1)
+	}
+
+	// Evaluate the model
+	if err := m.Eval(); err != nil {
+		log.Printf("Failed to evaluate model: %v", err)
+		os.Exit(1)
+	}
 }

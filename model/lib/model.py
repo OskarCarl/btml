@@ -43,7 +43,7 @@ class EvalRequest(betterproto.Message):
 
 @dataclass
 class Ack(betterproto.Message):
-    pass
+    success: bool = betterproto.bool_field(1)
 
 
 @dataclass

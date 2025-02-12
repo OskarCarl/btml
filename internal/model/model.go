@@ -52,6 +52,7 @@ func (m *SimpleModel) Apply(weights Weights) error {
 	if err := m.client.Apply(weights); err != nil {
 		return fmt.Errorf("failed to apply weigths to model: %w", err)
 	}
+	log.Default().Print("Applied weights to model")
 	return nil
 }
 
@@ -60,6 +61,7 @@ func (m *SimpleModel) GetWeights() (Weights, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch weights from model: %w", err)
 	}
+	log.Default().Print("Got weights from model")
 	return w, nil
 }
 

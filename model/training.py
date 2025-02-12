@@ -89,8 +89,8 @@ class Model:
                 correct += (pred.argmax(1) == y).type(torch.float).sum().item()
         test_loss /= num_batches
         correct /= size
-        logging.info(f"Test Error: \n Accuracy: {(100*correct):>0.1f}%, Avg loss: {test_loss:>8f} \n")
-        return 100*correct, test_loss
+        logging.info(f"Test Error: Accuracy: {correct:>0.4f}, Avg loss: {test_loss:>8f}")
+        return correct, test_loss
 
     def export_model_weights(self) -> Dict[str, Any]:
         """Export model weights as a state dict."""
