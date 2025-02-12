@@ -8,8 +8,10 @@ DOCKER_GPUFLAGS ?= $(DOCKER_GPU_VERSION_OVERRIDE) --device=/dev/kfd:rw --device=
 PEER_ID ?= 0
 MODEL_CMDLINE ?= --train-data data/prepared/fMNIST_train_split_$(PEER_ID).pt --test-data data/prepared/fMNIST_test_split_$(PEER_ID).pt
 
-test: .docker-build
+test: test-reqs
 	$(MAKE) docker-run-cpu MODEL_CMDLINE="$(MODEL_CMDLINE) --oneshot"
+
+test-reqs: .docker-build lib/model.py
 
 docker-run-cpu: logs/ lib/model.py .docker-build
 	docker run $(DOCKERFLAGS) $(IMAGE) python main.py $(MODEL_CMDLINE)

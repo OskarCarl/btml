@@ -3,6 +3,7 @@ IMAGE ?= btfl-model
 DOCKERFLAGS ?= -it --rm -v ./:/app -w /app --user $(shell id -u):$(shell id -g)
 
 test-model: bin/test-model
+	@$(MAKE) -C model/ test-reqs
 	docker run $(DOCKERFLAGS) $(IMAGE) bin/test-model
 
 test-run: logs/ bin/test-runner bin/peer bin/tracker

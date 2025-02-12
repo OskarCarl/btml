@@ -1,4 +1,3 @@
-from base64 import encode
 import logging, io, os, socket
 
 import betterproto
@@ -51,9 +50,12 @@ class ModelServer:
                     continue
 
             # Read the message
-            data = self.conn.recv(msg_len)
-            if not data:
-                break
+            data = b""
+            while len(data) < msg_len:
+                data += self.conn.recv(msg_len)
+                if not data:
+                    # Client has disconnected
+                    raise Exception("Client disconnected")
             logging.info(f"Got message of length {len(data)}")
 
             # Parse request

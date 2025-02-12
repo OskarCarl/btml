@@ -96,12 +96,11 @@ class Model:
         """Export model weights as a state dict."""
         return self.model.state_dict()
 
-    def import_model_weights(self, state_dict: dict, weight_ratio: float = 1.0):
+    def import_model_weights(self, state_dict: Dict[str, Any], weight_ratio: float = 1.0):
         """
         Import model weights from a state dict with weighted averaging.
 
         Args:
-            model: The model to import weights into
             state_dict: The state dict containing the weights to import
             weight_ratio: Float between 0 and 1, where:
                 0 = keep current weights
