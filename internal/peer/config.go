@@ -12,6 +12,16 @@ import (
 type Config struct {
 	Name       string
 	TrackerURL string
+	Dataset    string
+	Basepath   string
+}
+
+func GetTrainPath(c *Config) string {
+	return fmt.Sprintf("%s/%s_train_split_%s.pt", c.Basepath, c.Dataset, c.Name)
+}
+
+func GetTestPath(c *Config) string {
+	return fmt.Sprintf("%s/%s_test_split_%s.pt", c.Basepath, c.Dataset, c.Name)
 }
 
 func Autoconf(c *Config) error {
@@ -31,5 +41,6 @@ func Autoconf(c *Config) error {
 	}
 
 	c.Name = strconv.Itoa(whoami.Id)
+	c.Dataset = whoami.Dataset
 	return nil
 }

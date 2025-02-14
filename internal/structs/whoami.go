@@ -1,5 +1,6 @@
 package structs
 
 type WhoAmI struct {
-	Id int
+	Id      int
+	Dataset string
 }
