@@ -39,7 +39,7 @@ func main() {
 		c.Name = name
 	}
 
-	logging.Logger.SetPrefix("[PEER " + name + "]")
+	logging.Logger.SetPrefix("[PEER " + c.Name + "]")
 	logging.Logger.Use()
 
 	peer.Start(c)

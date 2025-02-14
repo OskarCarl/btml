@@ -7,44 +7,52 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/vs-ude/btfl/internal/structs"
 )
 
-type tracker struct {
+type Tracker struct {
+	Addr  string
 	peers *structs.Peerlist
+	conf  *Config
 }
 
-func Serve(listenAddr string, done chan int) {
-	t := &tracker{peers: new(structs.Peerlist)}
-	t.peers.List = make(map[string]structs.Peer)
+func (t *Tracker) Serve(done chan int) {
+	t.peers = new(structs.Peerlist)
+	t.peers.List = make(map[string]*structs.Peer)
+	t.conf = &Config{
+		PeerTimeout: time.Second * 30,
+	}
 	http.HandleFunc("/list", t.list)
 	http.HandleFunc("/join", t.join)
 	http.HandleFunc("/leave", t.leave)
 	http.HandleFunc("/whoami", t.initPeer)
-	log.Default().Printf("Starting on http://%s", listenAddr)
-	log.Default().Println(http.ListenAndServe(listenAddr, nil))
+	log.Default().Printf("Starting on http://%s", t.Addr)
+	log.Default().Println(http.ListenAndServe(t.Addr, nil))
 	done <- 1
 }
 
-func (t *tracker) list(w http.ResponseWriter, r *http.Request) {
+func (t *Tracker) list(w http.ResponseWriter, r *http.Request) {
+	t.peers.Touch(r.Header.Get("peer-id"))
 	data, _ := t.peers.Marshal()
 	w.Write(data)
 }
 
-func (t *tracker) join(w http.ResponseWriter, r *http.Request) {
+func (t *Tracker) join(w http.ResponseWriter, r *http.Request) {
 	peer, err := getPeer(r)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Default().Println("Error:", err.Error())
 		return
 	}
+	peer.LastSeen = time.Now()
 	t.peers.Add(peer)
 	w.WriteHeader(http.StatusOK)
 	log.Default().Printf("Added %s to the list of peers in the swarm\n", peer)
 }
 
-func (t *tracker) leave(w http.ResponseWriter, r *http.Request) {
+func (t *Tracker) leave(w http.ResponseWriter, r *http.Request) {
 	peer, err := getPeer(r)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

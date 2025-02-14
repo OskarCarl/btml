@@ -6,23 +6,20 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/vs-ude/btfl/internal/structs"
 )
 
 type Tracker struct {
-	URL      string
-	Peers    *structs.Peerlist
-	Identity *structs.Peer
+	URL            string
+	Peers          *structs.Peerlist
+	Identity       *structs.Peer
+	UpdateInterval time.Duration
 }
 
-func (t *Tracker) Setup(c *Config) {
-	t.URL = c.TrackerURL
-	t.Identity = &structs.Peer{
-		Name:        c.Name,
-		Fingerprint: "abbabbaba",
-	}
-	t.Identity.Addr = localPeer.localAddr
+func (t *Tracker) Setup(c *Config, p *structs.Peer) {
+	t.Identity = p
 	t.Peers = structs.NewPeerList()
 
 	err := t.Join()
@@ -33,7 +30,9 @@ func (t *Tracker) Setup(c *Config) {
 }
 
 func (t *Tracker) Update() error {
-	resp, err := http.Get(t.URL + "/list")
+	req, err := http.NewRequest("GET", t.URL+"/list", http.NoBody)
+	req.Header.Add("peer-id", t.Identity.Name)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}

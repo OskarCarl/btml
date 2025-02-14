@@ -25,13 +25,13 @@ func TestMashallingReverse(t *testing.T) {
 	// verify
 	for key, peer := range output.List {
 		expect := input.List[key]
-		if !equal(t, &peer, &expect) {
+		if !equal(t, peer, expect) {
 			t.Error("peerlists are not equal")
 		}
 	}
 	for key, peer := range input.List {
 		expect := output.List[key]
-		if !equal(t, &peer, &expect) {
+		if !equal(t, peer, expect) {
 			t.Error("peerlists are not equal")
 		}
 	}
@@ -55,18 +55,20 @@ func TestUnmarshalShouldError(t *testing.T) {
 func buildInput() *s.Peerlist {
 	addr1, _ := net.ResolveUDPAddr("udp", ":43439")
 	addr2, _ := net.ResolveUDPAddr("udp", "localhost:62123")
+	a := &s.Peer{
+		Name:        "a",
+		Addr:        addr1,
+		Fingerprint: "akljsdh",
+	}
+	b := &s.Peer{
+		Name:        "b",
+		Addr:        addr2,
+		Fingerprint: "lkjajf",
+	}
 	return &s.Peerlist{
-		List: map[string]s.Peer{
-			"a": {
-				Name:        "a",
-				Addr:        addr1,
-				Fingerprint: "akljsdh",
-			},
-			"b": {
-				Name:        "b",
-				Addr:        addr2,
-				Fingerprint: "lkjajf",
-			},
+		List: map[string]*s.Peer{
+			"a": a,
+			"b": b,
 		},
 	}
 }

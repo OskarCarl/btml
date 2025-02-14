@@ -10,7 +10,7 @@ import (
 )
 
 type Config struct {
-	Name,
+	Name       string
 	TrackerURL string
 }
 

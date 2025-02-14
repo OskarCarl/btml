@@ -23,7 +23,11 @@ func main() {
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
 	done := make(chan int, 1)
-	go tracker.Serve(listenAddr, done)
+	t := &tracker.Tracker{
+		Addr: listenAddr,
+	}
+	go t.Serve(done)
+	go t.MaintenanceLoop()
 
 	select {
 	case <-sig:
