@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/vs-ude/btfl/internal/structs"
 )
@@ -14,6 +15,8 @@ type Config struct {
 	TrackerURL string
 	Dataset    string
 	Basepath   string
+	Logpath    string
+	UpdateFreq time.Duration
 }
 
 func GetTrainPath(c *Config) string {
@@ -42,5 +45,6 @@ func Autoconf(c *Config) error {
 
 	c.Name = strconv.Itoa(whoami.Id)
 	c.Dataset = whoami.Dataset
+	c.UpdateFreq = whoami.UpdateFreq
 	return nil
 }

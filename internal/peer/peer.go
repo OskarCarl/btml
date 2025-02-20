@@ -20,8 +20,8 @@ func Start(c *Config) {
 	self.Addr = localPeer.localAddr
 
 	tracker := &Tracker{
-		URL:            c.TrackerURL,
-		UpdateInterval: time.Second * 10,
+		URL:        c.TrackerURL,
+		UpdateFreq: c.UpdateFreq,
 	}
 	tracker.Setup(c, self)
 	defer tracker.Leave()
@@ -42,8 +42,13 @@ func Start(c *Config) {
 	for len(localPeer.tracker.Peers.List) < 1 {
 		time.Sleep(time.Second * 2)
 	}
+	num := 0
 	for _, p := range localPeer.tracker.Peers.List {
+		if num > 4 {
+			break
+		}
 		localPeer.peerset.Add(p)
+		num++
 	}
 
 	go ping(outgoingDataChan)
@@ -74,7 +79,7 @@ func periodicUpdate(t *Tracker, wg *sync.WaitGroup, done chan struct{}) {
 				log.Default().Printf("Error updating peers from the tracker: %v\n", err)
 				return
 			}
-			timer.Reset(t.UpdateInterval)
+			timer.Reset(t.UpdateFreq)
 		case <-done:
 			return
 		}

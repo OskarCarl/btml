@@ -46,7 +46,17 @@ services:
       context: .
       dockerfile: ./docker/peer.dockerfile
     scale: 20
-    command: ["/app/peer", "-autoconf", "-trackerURL", "http://tracker:8080"]
+    command:
+      [
+        "/app/peer",
+        "-autoconf",
+        "-trackerURL",
+        "http://tracker:8080",
+        "-basepath",
+        "/data",
+        "-logpath",
+        "/logs",
+      ]
     volumes:
       - ./model/data:/data:ro
       - ./model/logs:/logs:rw

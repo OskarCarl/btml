@@ -1,4 +1,9 @@
-peer_timeout = "10s"
+[tracker]
+peer_timeout = "60s"
 maintain_interval = "30s"
-datafiles_base_path = "model/data/"
+max_peers = 100
+
+[peer]
 metric_url = "http://influx:8086"
+dataset = "fMNIST"
+update_freq = "30s"

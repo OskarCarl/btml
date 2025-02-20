@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 )
 
 var localPeer = new(LocalPeer)
@@ -88,6 +89,7 @@ func (l *LocalPeer) Outgoing(dc chan []byte, wg *sync.WaitGroup, quit chan struc
 		case <-quit:
 			return
 		case d = <-dc:
+			time.Sleep(time.Second * 20)
 			for name, peer := range l.peerset.Active {
 				n := 0
 				log.Default().Printf("Sending data to %s with len %d", name, len(d))

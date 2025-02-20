@@ -8,7 +8,7 @@ import (
 func (t *Tracker) MaintenanceLoop() {
 	log.Default().Println("Starting maintenance loop")
 	for {
-		time.Sleep(t.conf.MaintainInterval)
+		time.Sleep(t.conf.Tracker.MaintainInterval)
 		log.Default().Println("Running periodic maintenance")
 		t.cleanPeers()
 	}
@@ -18,7 +18,7 @@ func (t *Tracker) MaintenanceLoop() {
 // for the last t.conf.PeerTimeout duration.
 func (t *Tracker) cleanPeers() {
 	for _, p := range t.peers.List {
-		if p.LastSeen.Before(time.Now().Add(-t.conf.PeerTimeout)) {
+		if p.LastSeen.Before(time.Now().Add(-t.conf.Tracker.PeerTimeout)) {
 			log.Default().Printf("Removing %s from peerset due to inactivity", p)
 			t.peers.Remove(p)
 		}

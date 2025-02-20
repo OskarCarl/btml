@@ -12,10 +12,10 @@ import (
 )
 
 type Tracker struct {
-	URL            string
-	Peers          *structs.Peerlist
-	Identity       *structs.Peer
-	UpdateInterval time.Duration
+	URL        string
+	Peers      *structs.Peerlist
+	Identity   *structs.Peer
+	UpdateFreq time.Duration
 }
 
 func (t *Tracker) Setup(c *Config, p *structs.Peer) {

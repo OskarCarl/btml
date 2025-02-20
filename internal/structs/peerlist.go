@@ -44,6 +44,11 @@ func (pl *Peerlist) Touch(p string) {
 	pl.Unlock()
 }
 
+func (pl *Peerlist) Has(p string) bool {
+	_, ok := pl.List[p]
+	return ok
+}
+
 // Unmarshal parses the byte array into a Peerlist.
 // The list of peers is only persisted if unmarshalling was successful.
 func (pl *Peerlist) Unmarshal(b []byte) error {
