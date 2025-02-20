@@ -24,7 +24,7 @@ type incomingPacket struct {
 }
 
 func (l *LocalPeer) Setup() {
-	server, err := net.ListenPacket("udp", "localhost:0")
+	server, err := net.ListenPacket("udp", ":0")
 	if err != nil {
 		log.Default().Panicf("Error listening for packets: %v\n", err)
 	}

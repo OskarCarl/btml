@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:latest
+FROM pytorch/pytorch:latest AS app
+WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN --mount=type=bind,source=./requirements.txt,target=/app/requirements.txt pip install -r requirements.txt

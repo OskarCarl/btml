@@ -64,7 +64,13 @@ func (t *Tracker) Leave() error {
 }
 
 func getResponseBody(resp *http.Response) (*[]byte, error) {
-	buf := bytes.NewBuffer(make([]byte, 0, resp.ContentLength))
+	var b []byte
+	if resp.ContentLength > 0 {
+		b = make([]byte, 0, resp.ContentLength)
+	} else {
+		b = make([]byte, 0)
+	}
+	buf := bytes.NewBuffer(b)
 	_, err := buf.ReadFrom(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read response body data from tracker\n%w", err)

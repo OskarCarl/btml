@@ -1,0 +1,61 @@
+services:
+  influx:
+    image: influxdb:2
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=user
+      - DOCKER_INFLUXDB_INIT_PASSWORD=password
+      - DOCKER_INFLUXDB_INIT_ORG=default
+      - DOCKER_INFLUXDB_INIT_BUCKET=default
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-admin-token
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    networks:
+      - backend
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - influx
+    networks:
+      - backend
+
+  tracker:
+    build:
+      context: .
+      dockerfile: ./docker/tracker.dockerfile
+    ports:
+      - "8080:8080"
+    networks:
+      - backend
+
+  peer:
+    build:
+      context: .
+      dockerfile: ./docker/peer.dockerfile
+    scale: 20
+    command: ["/app/peer", "-autoconf", "-trackerURL", "http://tracker:8080"]
+    volumes:
+      - ./model/data:/data:ro
+      - ./model/logs:/logs:rw
+    depends_on:
+      - tracker
+    networks:
+      - backend
+
+volumes:
+  influxdb-data:
+  grafana-data:
+
+networks:
+  backend:
