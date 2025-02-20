@@ -8,7 +8,7 @@ import (
 func (t *Tracker) MaintenanceLoop() {
 	log.Default().Println("Starting maintenance loop")
 	for {
-		time.Sleep(time.Second * 30)
+		time.Sleep(t.conf.MaintainInterval)
 		log.Default().Println("Running periodic maintenance")
 		t.cleanPeers()
 	}
