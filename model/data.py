@@ -2,6 +2,7 @@ import logging
 from torch.utils.data import TensorDataset, DataLoader
 import torch
 
+
 class PreparedFashionMNIST(TensorDataset):
     dataset: TensorDataset
 
@@ -16,11 +17,17 @@ class PreparedFashionMNIST(TensorDataset):
     def __getitem__(self, idx: int):
         return self.data[idx], self.labels[idx]
 
+
 def create_data_loader(batch_size: int, train_path: str, test_path: str) -> tuple[DataLoader, DataLoader]:
-    training_data, test_data = PreparedFashionMNIST(train_path), PreparedFashionMNIST(test_path)
-    train_dataloader = DataLoader(training_data, batch_size=batch_size, shuffle=True)
-    test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=True)
+    logging.info(f"Loading data from {train_path} and {test_path}")
+    training_data, test_data = PreparedFashionMNIST(
+        train_path), PreparedFashionMNIST(test_path)
+    train_dataloader = DataLoader(
+        training_data, batch_size=batch_size, shuffle=True)
+    test_dataloader = DataLoader(
+        test_data, batch_size=batch_size, shuffle=True)
     return train_dataloader, test_dataloader
+
 
 def print_data_shape(dataloader: DataLoader):
     for X, y in dataloader:

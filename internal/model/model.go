@@ -67,22 +67,22 @@ func (m *SimpleModel) GetWeights() (Weights, error) {
 
 // NewModel creates a new Model instance by starting the Python process
 // and establishing a connection to it
-func NewSimpleModel(runtimePath, workdir, trainPath, testPath, logOutput string) (Model, error) {
+func NewSimpleModel(c *Config) (Model, error) {
 	// Create a random socket path in /tmp
 	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("btml-model-%d.sock", time.Now().UnixNano()))
 
 	// Start the Python process
 	args := []string{
 		"main.py",
-		"--train-data", trainPath,
-		"--test-data", testPath,
+		"--train-data", c.GetTrainDataPath(),
+		"--test-data", c.GetTestDataPath(),
 		"--socket", socketPath,
 	}
-	if logOutput != "" {
-		args = append(args, "--log-file", logOutput)
+	if c.LogPath != "" {
+		args = append(args, "--log-file", c.LogPath)
 	}
-	cmd := exec.Command(runtimePath, args...)
-	cmd.Dir = workdir
+	cmd := exec.Command(c.PythonRuntime, args...)
+	cmd.Dir = c.ModelPath
 
 	log.Default().Printf("Starting Python process: %s", cmd.String())
 	if err := cmd.Start(); err != nil {

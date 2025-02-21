@@ -7,24 +7,15 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/vs-ude/btml/internal/model"
 	"github.com/vs-ude/btml/internal/structs"
 )
 
 type Config struct {
 	Name       string
 	TrackerURL string
-	Dataset    string
-	Datapath   string
-	Logpath    string
 	UpdateFreq time.Duration
-}
-
-func GetTrainPath(c *Config) string {
-	return fmt.Sprintf("%s/%s_train_split_%s.pt", c.Datapath, c.Dataset, c.Name)
-}
-
-func GetTestPath(c *Config) string {
-	return fmt.Sprintf("%s/%s_test_split_%s.pt", c.Datapath, c.Dataset, c.Name)
+	ModelConf  *model.Config
 }
 
 func Autoconf(c *Config) error {
@@ -44,7 +35,9 @@ func Autoconf(c *Config) error {
 	}
 
 	c.Name = strconv.Itoa(whoami.Id)
-	c.Dataset = whoami.Dataset
 	c.UpdateFreq = whoami.UpdateFreq
+	c.ModelConf.Dataset = whoami.Dataset
+	c.ModelConf.Name = c.Name
+
 	return nil
 }

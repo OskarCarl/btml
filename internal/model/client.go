@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"os/exec"
 	"time"
@@ -135,7 +134,6 @@ func (c *ModelClient) readResponse(timeout int) (*ModelResponse, error) {
 	packLen := make(chan uint64, 1)
 	go func() {
 		l, err := binary.ReadUvarint(newConnReader(c.conn))
-		log.Printf("Got response of len %d", l)
 		if err == nil {
 			packLen <- l
 		}

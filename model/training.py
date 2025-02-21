@@ -6,6 +6,7 @@ from typing import Dict, Any
 
 from config import DEVICE, LEARNING_RATE
 
+
 class NeuralNetwork(nn.Module):
     def __init__(self):
         super().__init__()
@@ -23,6 +24,7 @@ class NeuralNetwork(nn.Module):
         logits = self.linear_relu_stack(x)
         return logits
 
+
 class Model:
     model: NeuralNetwork
     loss_fn: nn.CrossEntropyLoss
@@ -32,11 +34,12 @@ class Model:
 
     def __init__(self, train_dataloader: DataLoader, test_dataloader: DataLoader):
         self.model = NeuralNetwork().to(DEVICE)
-        logging.info(f"Initialized new model: {self.model}")
+        logging.info("Initialized new model")
 
         # Setup training
         self.loss_fn = nn.CrossEntropyLoss()
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=LEARNING_RATE)
+        self.optimizer = torch.optim.SGD(
+            self.model.parameters(), lr=LEARNING_RATE)
 
         self.train_dataloader = train_dataloader
         self.test_dataloader = test_dataloader
@@ -48,7 +51,7 @@ class Model:
         Returns:
             float: The average loss over all batches
         """
-        size = len(self.train_dataloader.dataset) #type: ignore
+        size = len(self.train_dataloader.dataset)  # type: ignore
         losses = []
         self.model.train()
         for batch, (X, y) in enumerate(self.train_dataloader):
@@ -77,7 +80,7 @@ class Model:
             float: accuracy
             float: loss
         """
-        size = len(self.test_dataloader.dataset) #type: ignore
+        size = len(self.test_dataloader.dataset)  # type: ignore
         num_batches = len(self.test_dataloader)
         self.model.eval()
         test_loss, correct = 0, 0
@@ -89,7 +92,8 @@ class Model:
                 correct += (pred.argmax(1) == y).type(torch.float).sum().item()
         test_loss /= num_batches
         correct /= size
-        logging.info(f"Test Error: Accuracy: {correct:>0.4f}, Avg loss: {test_loss:>8f}")
+        logging.info(
+            f"Test Error: Accuracy: {correct:>0.4f}, Avg loss: {test_loss:>8f}")
         return correct, test_loss
 
     def export_model_weights(self) -> Dict[str, Any]:

@@ -15,7 +15,7 @@ test-tracker: bin/tracker
 	bin/tracker -config config/tracker/config.toml
 
 test-peer: bin/peer setup-model
-	bin/peer -autoconf -tracker http://localhost:8080 -model model/ -datapath model/data/ -logpath model/logs/model.log
+	bin/peer -autoconf -python venv/bin/python
 
 bin/test-model: bin/ cmd/test-model/*.go internal/model/*.go internal/model/peer-model.pb.go
 	go build $(GOFLAGS) -o bin/test-model ./cmd/test-model

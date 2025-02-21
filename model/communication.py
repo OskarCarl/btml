@@ -1,10 +1,14 @@
-import logging, io, os, socket
+import logging
+import io
+import os
+import socket
 
 import betterproto
 import torch
 
 from training import Model
 import lib.model as pb
+
 
 class ModelServer:
     def __init__(self, model: Model, socket_path: str):
@@ -38,7 +42,7 @@ class ModelServer:
             self.conn.sendall(betterproto.encode_varint(42))
 
         while True:
-            logging.info("Waiting for command.")
+            logging.info("Waiting for command")
             # Read message length (varint)
             buf = []
             while True:
@@ -56,7 +60,6 @@ class ModelServer:
                 if not data:
                     # Client has disconnected
                     raise Exception("Client disconnected")
-            logging.info(f"Got message of length {len(data)}")
 
             # Parse request
             request = pb.ModelRequest().parse(data)
@@ -67,13 +70,16 @@ class ModelServer:
             match t:
                 case "export_weights":
                     _ack()
+                    logging.info("Exporting weights")
                     weights_buffer = io.BytesIO()
-                    torch.save(self.model.export_model_weights(), weights_buffer)
+                    torch.save(self.model.export_model_weights(),
+                               weights_buffer)
                     response.success = True
                     response.weights = weights_buffer.getvalue()
 
                 case "import_weights":
                     _ack()
+                    logging.info("Importing weights")
                     try:
                         weights = torch.load(io.BytesIO(values.weights))
                         self.model.import_model_weights(
@@ -87,12 +93,14 @@ class ModelServer:
 
                 case "train":
                     _ack()
+                    logging.info("Training model")
                     avg_loss = self.model.train()
                     response.loss = avg_loss
                     response.success = True
 
                 case "eval":
                     _ack()
+                    logging.info("Evaluating model")
                     accuracy, loss = self.model.test()
                     response.accuracy = accuracy
                     response.loss = loss
@@ -100,6 +108,5 @@ class ModelServer:
 
             # Send response with length prefix
             response_data = bytes(response)
-            logging.info("Sending response")
             self.conn.send(betterproto.encode_varint(len(response_data)))
             self.conn.send(response_data)

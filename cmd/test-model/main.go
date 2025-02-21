@@ -15,14 +15,16 @@ func main() {
 	logging.Logger.SetPrefix("[TEST-MODEL] ")
 	logging.Logger.Use()
 
+	c := &model.Config{
+		Name:          "42",
+		PythonRuntime: "python3",
+		ModelPath:     "model/",
+		Dataset:       "fMNIST",
+		DataPath:      "data/prepared/",
+		LogPath:       "logs/model.log",
+	}
 	// Create a new model instance
-	m, err := model.NewSimpleModel(
-		"python3",
-		"model/",
-		"data/prepared/fMNIST_train_split_42.pt",
-		"data/prepared/fMNIST_test_split_42.pt",
-		"logs/model.log",
-	)
+	m, err := model.NewSimpleModel(c)
 	if err != nil {
 		log.Printf("Failed to create model: %v", err)
 		os.Exit(1)

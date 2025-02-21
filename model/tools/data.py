@@ -37,7 +37,8 @@ def split_and_save_dataset(dataset, num_splits: int, output_dir: str, prefix: st
     total_size = len(dataset)
     split_size = total_size // num_splits
     split_sizes = [split_size] * (num_splits - 1)
-    split_sizes.append(total_size - split_size * (num_splits - 1))  # Account for remainder
+    split_sizes.append(total_size - split_size *
+                       (num_splits - 1))  # Account for remainder
 
     # Split the dataset
     splits = random_split(dataset, split_sizes)
@@ -62,24 +63,27 @@ def split_and_save_dataset(dataset, num_splits: int, output_dir: str, prefix: st
             'labels': split_labels
         }
 
-        output_path = os.path.join(output_dir, f"fMNIST_{prefix}_split_{idx}.pt")
+        output_path = os.path.join(output_dir, f"fMNIST_{
+                                   prefix}_split_{idx}.pt")
         torch.save(split_dict, output_path)
         print(f"Saved split {idx} with {len(split)} samples to {output_path}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Prepare FashionMNIST dataset")
+    parser = argparse.ArgumentParser(
+        description="Prepare FashionMNIST dataset")
     parser.add_argument("--num-splits", type=int, default=5,
-                       help="Number of splits to create for each set")
+                        help="Number of splits to create for each set")
     parser.add_argument("--data-dir", type=str, default="data",
-                       help="Directory to store the raw dataset")
+                        help="Directory to store the raw dataset")
     parser.add_argument("--output-dir", type=str, default="processed_data",
-                       help="Directory to store the processed splits")
+                        help="Directory to store the processed splits")
 
     args = parser.parse_args()
 
     # Download and process the dataset
-    train_dataset, test_dataset = download_and_process_fashion_mnist(args.data_dir)
+    train_dataset, test_dataset = download_and_process_fashion_mnist(
+        args.data_dir)
 
     # Split and save training data
     split_and_save_dataset(

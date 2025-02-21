@@ -11,7 +11,7 @@ MODEL_CMDLINE ?= --train-data data/prepared/fMNIST_train_split_$(PEER_ID).pt --t
 test: test-reqs
 	$(MAKE) docker-run-cpu MODEL_CMDLINE="$(MODEL_CMDLINE) --oneshot"
 
-test-reqs: .docker-build lib/model.py
+test-reqs: .setup .docker-build lib/model.py logs/
 
 docker-run-cpu: logs/ lib/model.py .docker-build
 	docker run $(DOCKERFLAGS) $(IMAGE) python main.py $(MODEL_CMDLINE)

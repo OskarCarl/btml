@@ -7,10 +7,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/vs-ude/btml/internal/model"
 	"github.com/vs-ude/btml/internal/structs"
 )
 
-func Start(c *Config) {
+func Start(c *Config, m model.Model) {
 	localPeer.config = c
 	localPeer.Setup()
 	self := &structs.Peer{
@@ -51,6 +52,7 @@ func Start(c *Config) {
 		num++
 	}
 
+	go m.Train()
 	go ping(outgoingDataChan)
 
 	time.Sleep(time.Second * 60)
