@@ -20,11 +20,11 @@ func main() {
 	var datapath string
 	var logpath string
 	var autoconf bool
-	flag.StringVar(&trackerURL, "tracker", "http://127.0.0.1:8080", "The URL of the tracker. Default is http://127.0.0.1:8080.")
-	flag.StringVar(&name, "name", "", "Name of the peer. Default is a random int.")
-	flag.StringVar(&model, "model", "model/", "Path where the main.py file is located. Default is model/.")
-	flag.StringVar(&datapath, "datapath", "model/data/", "Base path for the training and testing data. Default is model/data/.")
-	flag.StringVar(&logpath, "logpath", "model/logs/model.log", "Path for the python log file. Default is model/logs/model.log.")
+	flag.StringVar(&trackerURL, "tracker", "http://127.0.0.1:8080", "The URL of the tracker.")
+	flag.StringVar(&name, "name", "", "Name of the peer. Default is a random int(0,100).")
+	flag.StringVar(&model, "model", "model/", "Path where the main.py file is located.")
+	flag.StringVar(&datapath, "datapath", "model/data/", "Base path for the training and testing data.")
+	flag.StringVar(&logpath, "logpath", "model/logs/model.log", "Path for the python log file.")
 	flag.BoolVar(&autoconf, "autoconf", false, "Automatically configure this peer using the provided tracker.")
 	flag.Parse()
 
@@ -42,7 +42,7 @@ func main() {
 		}
 	} else {
 		if name == "" {
-			i, _ := rand.Int(rand.Reader, big.NewInt(10000))
+			i, _ := rand.Int(rand.Reader, big.NewInt(100))
 			name = strconv.Itoa(int(i.Int64()))
 		}
 		c.Name = name

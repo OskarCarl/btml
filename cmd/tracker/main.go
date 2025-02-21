@@ -14,8 +14,8 @@ import (
 func main() {
 	var listenAddr string
 	var configPath string
-	flag.StringVar(&listenAddr, "listen", "127.0.0.1:8080", "The address the tracker listens on. Default: 127.0.0.1:8080")
-	flag.StringVar(&configPath, "config", "", "The path to the configuration file. Default: config.toml")
+	flag.StringVar(&listenAddr, "listen", ":8080", "The address the tracker listens on.")
+	flag.StringVar(&configPath, "config", "config/tracker/config.toml", "The path to the configuration file.")
 	flag.Parse()
 
 	logging.Logger.SetPrefix("[TRACKER]")
