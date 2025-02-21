@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/vs-ude/btfl/internal/structs"
+	"github.com/vs-ude/btml/internal/structs"
 )
 
 // initPeer gives a requesting peer all information it needs to initialize itself correctly to join the swarm

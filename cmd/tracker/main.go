@@ -7,8 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/vs-ude/btfl/internal/logging"
-	"github.com/vs-ude/btfl/internal/tracker"
+	"github.com/vs-ude/btml/internal/logging"
+	"github.com/vs-ude/btml/internal/tracker"
 )
 
 func main() {

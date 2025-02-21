@@ -4,9 +4,9 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/vs-ude/btfl/internal/peer"
-	"github.com/vs-ude/btfl/internal/structs"
-	"github.com/vs-ude/btfl/internal/trust"
+	"github.com/vs-ude/btml/internal/peer"
+	"github.com/vs-ude/btml/internal/structs"
+	"github.com/vs-ude/btml/internal/trust"
 )
 
 func TestGetWorstActive(t *testing.T) {

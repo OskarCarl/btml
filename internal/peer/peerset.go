@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/vs-ude/btfl/internal/structs"
-	"github.com/vs-ude/btfl/internal/trust"
+	"github.com/vs-ude/btml/internal/structs"
+	"github.com/vs-ude/btml/internal/trust"
 )
 
 type ErrPeerInactive error

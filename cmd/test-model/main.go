@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/vs-ude/btfl/internal/logging"
-	"github.com/vs-ude/btfl/internal/model"
+	"github.com/vs-ude/btml/internal/logging"
+	"github.com/vs-ude/btml/internal/model"
 )
 
 func main() {
@@ -17,8 +17,8 @@ func main() {
 
 	// Create a new model instance
 	m, err := model.NewSimpleModel(
-		"model/",
 		"python3",
+		"model/",
 		"data/prepared/fMNIST_train_split_42.pt",
 		"data/prepared/fMNIST_test_split_42.pt",
 		"logs/model.log",

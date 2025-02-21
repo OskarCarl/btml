@@ -1,5 +1,5 @@
 TAG ?= latest
-IMAGE ?= btfl-model
+IMAGE ?= btml-model
 DOCKERFLAGS ?= -it --rm -v ./:/app -w /app --user $(shell id -u):$(shell id -g)
 GPU_IMAGE ?= rocm/pytorch:$(TAG)
 DOCKER_GPU_VERSION_OVERRIDE ?= -e HSA_OVERRIDE_GFX_VERSION="11.0.1"
@@ -42,8 +42,7 @@ venv/:
 	mkdir -p $@
 
 clean:
-	rm -rf venv/
-	rm -rf logs/
+	rm -rf venv/ logs/ __pycache__/ **/__pycache__/ .setup
 
 reset:
 	rm -f logs/*.log

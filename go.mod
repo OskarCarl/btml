@@ -1,4 +1,4 @@
-module github.com/vs-ude/btfl
+module github.com/vs-ude/btml
 
 go 1.23
 

@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/BurntSushi/toml"
-	"github.com/vs-ude/btfl/internal/structs"
+	"github.com/vs-ude/btml/internal/structs"
 )
 
 type Tracker struct {

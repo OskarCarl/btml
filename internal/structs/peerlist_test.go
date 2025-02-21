@@ -4,7 +4,7 @@ import (
 	"net"
 	"testing"
 
-	s "github.com/vs-ude/btfl/internal/structs"
+	s "github.com/vs-ude/btml/internal/structs"
 )
 
 func TestMashallingReverse(t *testing.T) {

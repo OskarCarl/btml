@@ -7,24 +7,24 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/vs-ude/btfl/internal/structs"
+	"github.com/vs-ude/btml/internal/structs"
 )
 
 type Config struct {
 	Name       string
 	TrackerURL string
 	Dataset    string
-	Basepath   string
+	Datapath   string
 	Logpath    string
 	UpdateFreq time.Duration
 }
 
 func GetTrainPath(c *Config) string {
-	return fmt.Sprintf("%s/%s_train_split_%s.pt", c.Basepath, c.Dataset, c.Name)
+	return fmt.Sprintf("%s/%s_train_split_%s.pt", c.Datapath, c.Dataset, c.Name)
 }
 
 func GetTestPath(c *Config) string {
-	return fmt.Sprintf("%s/%s_test_split_%s.pt", c.Basepath, c.Dataset, c.Name)
+	return fmt.Sprintf("%s/%s_test_split_%s.pt", c.Datapath, c.Dataset, c.Name)
 }
 
 func Autoconf(c *Config) error {

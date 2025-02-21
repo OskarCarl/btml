@@ -67,9 +67,9 @@ func (m *SimpleModel) GetWeights() (Weights, error) {
 
 // NewModel creates a new Model instance by starting the Python process
 // and establishing a connection to it
-func NewSimpleModel(workdir, runtimePath, trainPath, testPath, logOutput string) (Model, error) {
+func NewSimpleModel(runtimePath, workdir, trainPath, testPath, logOutput string) (Model, error) {
 	// Create a random socket path in /tmp
-	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("btfl-model-%d.sock", time.Now().UnixNano()))
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("btml-model-%d.sock", time.Now().UnixNano()))
 
 	// Start the Python process
 	args := []string{
@@ -92,7 +92,7 @@ func NewSimpleModel(workdir, runtimePath, trainPath, testPath, logOutput string)
 	// Try to connect to the socket with retries
 	var conn net.Conn
 	var err error
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		conn, err = net.Dial("unix", socketPath)
 		if err == nil {
 			break

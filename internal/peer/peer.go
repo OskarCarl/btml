@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vs-ude/btfl/internal/structs"
+	"github.com/vs-ude/btml/internal/structs"
 )
 
 func Start(c *Config) {
