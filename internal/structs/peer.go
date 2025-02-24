@@ -15,3 +15,12 @@ type Peer struct {
 func (p *Peer) String() string {
 	return p.Name
 }
+
+func (p *Peer) Copy() *Peer {
+	return &Peer{
+		Name:        p.Name,
+		Addr:        p.Addr,
+		Fingerprint: p.Fingerprint,
+		LastSeen:    p.LastSeen,
+	}
+}

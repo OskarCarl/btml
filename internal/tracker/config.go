@@ -10,6 +10,7 @@ type Config struct {
 		PeerTimeout      time.Duration `toml:"peer_timeout"`
 		MaintainInterval time.Duration `toml:"maintain_interval"`
 		MaxPeers         int           `toml:"max_peers"`
+		MaxReturnPeers   int           `toml:"max_return_peers"`
 	} `toml:"tracker"`
 	Peer struct {
 		MetricURL  string        `toml:"metric_url"`

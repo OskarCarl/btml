@@ -3,15 +3,24 @@ package tracker
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/vs-ude/btml/internal/structs"
 )
 
+type touch struct {
+	peer string
+	t    time.Time
+}
+
 type Tracker struct {
-	addr  string
-	peers *structs.Peerlist
-	conf  *Config
+	addr       string
+	peers      *structs.Peerlist
+	conf       *Config
+	newlist    chan *structs.Peer
+	removelist chan string
+	touchlist  chan touch
 }
 
 func NewTracker(addr string, conf string) *Tracker {
@@ -23,10 +32,15 @@ func NewTracker(addr string, conf string) *Tracker {
 			log.Fatal(err)
 		}
 	}
-	return &Tracker{
-		addr: addr,
-		conf: c,
+	// We assume that no more than 1000 peers will join/leave between two maintenance cycles
+	t := &Tracker{
+		addr:       addr,
+		conf:       c,
+		newlist:    make(chan *structs.Peer, 1000),
+		removelist: make(chan string, 1000),
+		touchlist:  make(chan touch, 10000),
 	}
+	return t
 }
 
 func (t *Tracker) Serve(done chan int) {

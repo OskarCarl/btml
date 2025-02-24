@@ -1,7 +1,9 @@
 [tracker]
 peer_timeout = "60s"
-maintain_interval = "30s"
+maintain_interval = "10s"
 max_peers = 100
+max_return_peers = 100
+
 
 [peer]
 metric_url = "http://influx:8086"
