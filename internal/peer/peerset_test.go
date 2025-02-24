@@ -15,7 +15,7 @@ func TestGetWorstActive(t *testing.T) {
 	const LEN = 3
 
 	// run
-	lowest := ps.GetWorstActive(LEN)
+	lowest := ps.GetWorstUnchoked(LEN)
 
 	// verify
 	if len(lowest) != LEN {
@@ -43,8 +43,8 @@ func buildPeerSet() *peer.PeerSet {
 
 	for i := 0; i < 8; i++ {
 		n := strconv.Itoa(i)
-		ps.Active["peer"+n] = buildPeer(10-i, n)   // Score and name are sorted inversely!
-		ps.Inactive["peer"+n] = buildPeer(10-i, n) // Score and name are sorted inversely!
+		ps.Active["peer"+n] = buildPeer(10-i, n) // Score and name are sorted inversely!
+		ps.Choked["peer"+n] = buildPeer(10-i, n)   // Score and name are sorted inversely!
 	}
 
 	return ps

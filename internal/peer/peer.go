@@ -27,6 +27,7 @@ func Start(c *Config, m model.Model) {
 	tracker.Setup(c, self)
 	defer tracker.Leave()
 
+	// Closing this channel signals the other routines to stop.
 	quit := make(chan struct{})
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
@@ -36,8 +37,9 @@ func Start(c *Config, m model.Model) {
 	localPeer.peerset = NewPeerSet()
 	wg.Add(1)
 	go localPeer.Listen(wg, quit)
-	wg.Add(1)
+
 	outgoingDataChan := make(chan []byte, 20)
+	wg.Add(1)
 	go localPeer.Outgoing(outgoingDataChan, wg, quit)
 
 	for len(localPeer.tracker.Peers.List) < 1 {

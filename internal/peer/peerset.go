@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 
+	"maps"
+
 	"github.com/vs-ude/btml/internal/structs"
 	"github.com/vs-ude/btml/internal/trust"
 )
@@ -14,8 +16,8 @@ type peerStatus int
 
 const (
 	ERR peerStatus = iota
-	EXISTS_ACTIVE
-	EXISTS_INACTIVE
+	UNCHOKED
+	CHOKED
 	UNKNOWN
 )
 
@@ -26,13 +28,13 @@ type KnownPeer struct {
 
 type PeerSet struct {
 	Active,
-	Inactive map[string]*KnownPeer
+	Choked map[string]*KnownPeer
 }
 
 func NewPeerSet() *PeerSet {
 	return &PeerSet{
-		Active:   make(map[string]*KnownPeer),
-		Inactive: make(map[string]*KnownPeer),
+		Active: make(map[string]*KnownPeer),
+		Choked: make(map[string]*KnownPeer),
 	}
 }
 
@@ -49,9 +51,9 @@ func (ps *PeerSet) Add(p *structs.Peer) error {
 	switch status, err := ps.CheckPeer(p); {
 	case err != nil:
 		return err
-	case status == EXISTS_INACTIVE:
-		return fmt.Errorf("peer is known and in inactive set")
-	case status == EXISTS_ACTIVE:
+	case status == CHOKED:
+		return fmt.Errorf("peer is known and choked")
+	case status == UNCHOKED:
 		assign(ps.Active[p.String()], p)
 	case status == UNKNOWN:
 		tmp := &KnownPeer{S: 0}
@@ -61,24 +63,22 @@ func (ps *PeerSet) Add(p *structs.Peer) error {
 	return nil
 }
 
-// Demote the n worst-scoring peers from the Active to the Inactive set.
-// Overwrites peers in the Inactive set if necessary.
-func (ps *PeerSet) Demote(n int) {
+// Choke the n worst-scoring peers.
+// Overwrites peers in the Choked set if necessary.
+func (ps *PeerSet) Choke(n int) {
 	if n > len(ps.Active) {
-		for k, v := range ps.Active {
-			ps.Inactive[k] = v
-		}
+		maps.Copy(ps.Choked, ps.Active)
 		clear(ps.Active)
 	}
 
-	lowest := ps.GetWorstActive(n)
+	lowest := ps.GetWorstUnchoked(n)
 	for _, p := range lowest {
-		ps.Inactive[p] = ps.Active[p]
+		ps.Choked[p] = ps.Active[p]
 		delete(ps.Active, p)
 	}
 }
 
-func (ps *PeerSet) GetWorstActive(n int) []string {
+func (ps *PeerSet) GetWorstUnchoked(n int) []string {
 	keys := make([]string, 0, len(ps.Active))
 	for k := range ps.Active {
 		keys = append(keys, k)
@@ -89,11 +89,11 @@ func (ps *PeerSet) GetWorstActive(n int) []string {
 	return keys[:n]
 }
 
-func (ps *PeerSet) Promote(n int) {
+func (ps *PeerSet) Unchoke(n int) {
 	// TODO: implement
 }
 
-func (ps *PeerSet) GetBestInactive(n int) []string {
+func (ps *PeerSet) GetBestChoked(n int) []string {
 	// TODO: implement
 	return nil
 }
@@ -103,17 +103,17 @@ func (ps *PeerSet) CheckPeer(new *structs.Peer) (peerStatus, error) {
 	if p, ok := ps.Active[new.String()]; ok {
 		// TODO: properly verify the fingerprint
 		if p.P.Fingerprint == new.Fingerprint {
-			return EXISTS_ACTIVE, nil
+			return UNCHOKED, nil
 		} else {
-			return ERR, fmt.Errorf("active peer exists and the new one has a non-matching fingerprint")
+			return ERR, fmt.Errorf("unchoked peer exists and the new one has a non-matching fingerprint")
 		}
 	}
-	if p, ok := ps.Inactive[new.String()]; ok {
+	if p, ok := ps.Choked[new.String()]; ok {
 		// TODO: properly verify the fingerprint and check the score
 		if p.P.Fingerprint == new.Fingerprint {
-			return EXISTS_INACTIVE, nil
+			return CHOKED, nil
 		} else {
-			return ERR, fmt.Errorf("inactive peer exists and the new one has a non-matching fingerprint")
+			return ERR, fmt.Errorf("choked peer exists and the new one has a non-matching fingerprint")
 		}
 	}
 	return UNKNOWN, nil
