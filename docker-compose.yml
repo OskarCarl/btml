@@ -50,10 +50,12 @@ services:
       [
         "/app/peer",
         "-autoconf",
-        "-trackerURL",
+        "-tracker",
         "http://tracker:8080",
-        "-basepath",
-        "/data",
+        "-model",
+        "/app/model",
+        "-datapath",
+        "/data/prepared",
         "-logpath",
         "/logs",
       ]

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -69,7 +70,7 @@ func (m *SimpleModel) GetWeights() (Weights, error) {
 // and establishing a connection to it
 func NewSimpleModel(c *Config) (Model, error) {
 	// Create a random socket path in /tmp
-	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("btml-model-%d.sock", time.Now().UnixNano()))
+	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("btml-model-%d.sock", time.Now().Unix()))
 
 	// Start the Python process
 	args := []string{
@@ -79,7 +80,11 @@ func NewSimpleModel(c *Config) (Model, error) {
 		"--socket", socketPath,
 	}
 	if c.LogPath != "" {
-		args = append(args, "--log-file", c.LogPath)
+		if p, err := resolveLogPath(c); err == nil {
+			args = append(args, "--log-file", p)
+		} else {
+			log.Default().Printf("Log path should be either a nonexistent *.log file or a directory: %s", err)
+		}
 	}
 	cmd := exec.Command(c.PythonRuntime, args...)
 	cmd.Dir = c.ModelPath
@@ -116,4 +121,16 @@ func NewSimpleModel(c *Config) (Model, error) {
 	}
 
 	return m, nil
+}
+
+func resolveLogPath(c *Config) (string, error) {
+	info, err := os.Stat(c.LogPath)
+	if err == nil && info.IsDir() {
+		name := fmt.Sprintf("%d-peer_%s.log", time.Now().Unix(), c.Name)
+		return filepath.Join(c.LogPath, name), nil
+	} else if os.IsNotExist(err) && strings.HasSuffix(c.LogPath, ".log") {
+		return c.LogPath, nil
+	} else {
+		return "", fmt.Errorf("unable to determine log file path: %w", err)
+	}
 }

@@ -39,4 +39,7 @@ clean:
 	rm -rf bin/ logs/
 	@$(MAKE) -C model/ clean
 
+reset:
+	$(MAKE) -C model/ reset
+
 .PHONY: clean test-go
