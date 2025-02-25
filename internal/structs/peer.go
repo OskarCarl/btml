@@ -16,6 +16,7 @@ func (p *Peer) String() string {
 	return p.Name
 }
 
+// Copy returns an independent deep copy of the Peer struct.
 func (p *Peer) Copy() *Peer {
 	return &Peer{
 		Name:        p.Name,

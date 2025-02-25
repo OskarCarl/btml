@@ -39,33 +39,20 @@ func NewPeerSet() *PeerSet {
 }
 
 func (ps *PeerSet) Add(p *structs.Peer) error {
-	assign := func(e *KnownPeer, n *structs.Peer) {
-		// Deep copy to avoid concurrency problems
-		e.P = &structs.Peer{
-			Name:        n.Name,
-			Addr:        n.Addr,
-			Fingerprint: n.Fingerprint,
-		}
-	}
-
 	switch status, err := ps.CheckPeer(p); {
 	case err != nil:
 		return err
 	case status == CHOKED:
 		return fmt.Errorf("peer is known and choked")
-	case status == UNCHOKED:
-		assign(ps.Active[p.String()], p)
-	case status == UNKNOWN:
-		tmp := &KnownPeer{S: 0}
-		assign(tmp, p) // Assign to tmp first to avoid concurrency issues
-		ps.Active[p.String()] = tmp
+	case status == UNCHOKED || status == UNKNOWN:
+		ps.Active[p.String()] = &KnownPeer{S: 0, P: p.Copy()}
 	}
 	return nil
 }
 
-// Choke the n worst-scoring peers.
+// MultiChoke chokes the n worst-scoring peers.
 // Overwrites peers in the Choked set if necessary.
-func (ps *PeerSet) Choke(n int) {
+func (ps *PeerSet) MultiChoke(n int) {
 	if n > len(ps.Active) {
 		maps.Copy(ps.Choked, ps.Active)
 		clear(ps.Active)
@@ -73,9 +60,15 @@ func (ps *PeerSet) Choke(n int) {
 
 	lowest := ps.GetWorstUnchoked(n)
 	for _, p := range lowest {
-		ps.Choked[p] = ps.Active[p]
-		delete(ps.Active, p)
+		ps.Choke(p)
 	}
+}
+
+// Choke adds the given peer to the choke set and removes it from the active
+// set.
+func (ps *PeerSet) Choke(p string) {
+	ps.Choked[p] = ps.Active[p]
+	delete(ps.Active, p)
 }
 
 func (ps *PeerSet) GetWorstUnchoked(n int) []string {
