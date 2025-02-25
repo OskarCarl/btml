@@ -8,10 +8,10 @@ import (
 	"time"
 )
 
-var localPeer = new(LocalPeer)
+var me = new(Me)
 
-// LocalPeer is the peer we use
-type LocalPeer struct {
+// Me is the peer we use
+type Me struct {
 	config    *Config
 	localAddr *net.UDPAddr
 	server    net.PacketConn
@@ -24,7 +24,7 @@ type incomingPacket struct {
 	from net.Addr
 }
 
-func (l *LocalPeer) Setup() {
+func (l *Me) Setup() {
 	server, err := net.ListenPacket("udp", ":0")
 	if err != nil {
 		log.Default().Panicf("Error listening for packets: %v\n", err)
@@ -34,7 +34,7 @@ func (l *LocalPeer) Setup() {
 	log.Default().Printf("Listening on %s", l.localAddr.String())
 }
 
-func (l *LocalPeer) Listen(wg *sync.WaitGroup, quit chan struct{}) {
+func (l *Me) Listen(wg *sync.WaitGroup, quit chan struct{}) {
 	defer func() {
 		l.server.Close()
 		wg.Done()
@@ -56,7 +56,7 @@ func (l *LocalPeer) Listen(wg *sync.WaitGroup, quit chan struct{}) {
 	}
 }
 
-func (l *LocalPeer) listen(dchan chan incomingPacket) {
+func (l *Me) listen(dchan chan incomingPacket) {
 	p := make([]byte, 1024)
 	for {
 		n, addr, err := l.server.ReadFrom(p)
@@ -78,7 +78,7 @@ func (l *LocalPeer) listen(dchan chan incomingPacket) {
 	}
 }
 
-func (l *LocalPeer) Outgoing(dc chan []byte, wg *sync.WaitGroup, quit chan struct{}) {
+func (l *Me) Outgoing(dc chan []byte, wg *sync.WaitGroup, quit chan struct{}) {
 	defer wg.Done()
 	var (
 		d   []byte

@@ -12,13 +12,13 @@ import (
 )
 
 func Start(c *Config, m model.Model) {
-	localPeer.config = c
-	localPeer.Setup()
+	me.config = c
+	me.Setup()
 	self := &structs.Peer{
 		Name:        c.Name,
 		Fingerprint: "abbabbaba",
 	}
-	self.Addr = localPeer.localAddr
+	self.Addr = me.localAddr
 
 	tracker := &Tracker{
 		URL:        c.TrackerURL,
@@ -33,24 +33,24 @@ func Start(c *Config, m model.Model) {
 	wg.Add(1)
 	go periodicUpdate(tracker, wg, quit)
 
-	localPeer.tracker = tracker
-	localPeer.peerset = NewPeerSet()
+	me.tracker = tracker
+	me.peerset = NewPeerSet()
 	wg.Add(1)
-	go localPeer.Listen(wg, quit)
+	go me.Listen(wg, quit)
 
 	outgoingDataChan := make(chan []byte, 20)
 	wg.Add(1)
-	go localPeer.Outgoing(outgoingDataChan, wg, quit)
+	go me.Outgoing(outgoingDataChan, wg, quit)
 
-	for len(localPeer.tracker.Peers.List) < 1 {
+	for len(me.tracker.Peers.List) < 1 {
 		time.Sleep(time.Second * 2)
 	}
 	num := 0
-	for _, p := range localPeer.tracker.Peers.List {
+	for _, p := range me.tracker.Peers.List {
 		if num > 4 {
 			break
 		}
-		localPeer.peerset.Add(p)
+		me.peerset.Add(p)
 		num++
 	}
 
