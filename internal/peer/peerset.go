@@ -22,8 +22,9 @@ const (
 )
 
 type KnownPeer struct {
-	S trust.Score
-	P *structs.Peer
+	S                trust.Score
+	MostRecentUpdate int
+	P                *structs.Peer
 }
 
 type PeerSet struct {

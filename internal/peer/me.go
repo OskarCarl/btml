@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/quic-go/quic-go"
+	"github.com/vs-ude/btml/internal/model"
 )
 
 // Me is the peer we use
@@ -25,8 +26,8 @@ type Me struct {
 	peerset    *PeerSet
 	conns      sync.Map // map[string]quic.Connection
 	data       struct {
-		incomingChan chan []byte
-		outgoingChan chan []byte
+		incomingChan chan model.Weights
+		outgoingChan chan model.Weights
 	}
 }
 
@@ -44,11 +45,11 @@ func NewMe(config *Config) *Me {
 		conns:     sync.Map{},
 		tlsConfig: generateTLSConfig(),
 		data: struct {
-			incomingChan chan []byte
-			outgoingChan chan []byte
+			incomingChan chan model.Weights
+			outgoingChan chan model.Weights
 		}{
-			incomingChan: make(chan []byte, 10),
-			outgoingChan: make(chan []byte, 5),
+			incomingChan: make(chan model.Weights, 10),
+			outgoingChan: make(chan model.Weights, 5),
 		},
 	}
 }

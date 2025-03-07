@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package peer;
+
+option go_package = "internal/peer";
+
+message ModelUpdate {
+	string source = 1;
+	bytes weights = 2;
+	int64 age = 3;
+}

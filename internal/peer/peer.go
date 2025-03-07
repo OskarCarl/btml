@@ -1,9 +1,6 @@
 package peer
 
 import (
-	"crypto/rand"
-	"log"
-	"math/big"
 	"net"
 	"time"
 
@@ -39,8 +36,11 @@ func Start(c *Config, m model.Model) *Me {
 	return me
 }
 
-func (me *Me) Ping(dc chan []byte) {
-	// for {
+func (me *Me) Send(w model.Weights) {
+	me.data.outgoingChan <- w
+}
+
+func (me *Me) WaitReady() {
 	for len(me.tracker.Peers.List) < 1 {
 		time.Sleep(time.Second * 2)
 	}
@@ -52,9 +52,4 @@ func (me *Me) Ping(dc chan []byte) {
 		me.peerset.Add(p)
 		num++
 	}
-	wait, _ := rand.Int(rand.Reader, big.NewInt(5))
-	time.Sleep(time.Second * time.Duration(big.NewInt(0).Add(wait, big.NewInt(2)).Int64()))
-	log.Default().Printf("Sending ping")
-	dc <- []byte{0xff, 0xaf}
-	// }
 }

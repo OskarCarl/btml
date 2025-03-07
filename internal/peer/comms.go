@@ -2,12 +2,15 @@ package peer
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"io"
 	"log"
 	"net"
 
 	"github.com/quic-go/quic-go"
+	"github.com/vs-ude/btml/internal/model"
+	"google.golang.org/protobuf/proto"
 )
 
 func (me *Me) Listen() {
@@ -59,14 +62,39 @@ func (me *Me) handleStream(stream quic.Stream) {
 	defer stream.Close()
 
 	for {
-		buf := make([]byte, 1024)
-		n, err := stream.Read(buf)
-		if err != nil && !errors.Is(err, io.EOF) {
-			log.Default().Printf("Error reading from stream: %v", err)
+		// Read message length prefix (4 bytes)
+		lenBuf := make([]byte, 4)
+		_, err := io.ReadFull(stream, lenBuf)
+		if err != nil {
+			if !errors.Is(err, io.EOF) {
+				log.Default().Printf("Error reading message length: %v", err)
+			}
 			return
 		}
-		log.Default().Printf("Received data with len %d", n)
-		me.data.incomingChan <- buf[:n]
+
+		msgLen := binary.BigEndian.Uint32(lenBuf)
+
+		// Read the actual message
+		msgBuf := make([]byte, msgLen)
+		_, err = io.ReadFull(stream, msgBuf)
+		if err != nil {
+			log.Default().Printf("Error reading message body: %v", err)
+			return
+		}
+
+		// Unmarshal the protobuf message
+		update := &ModelUpdate{}
+		err = proto.Unmarshal(msgBuf, update)
+		if err != nil {
+			log.Default().Printf("Error unmarshaling model update: %v", err)
+			continue
+		}
+
+		w := model.NewSimpleWeights(update.Weights)
+
+		log.Default().Printf("Received model update from %s, age: %d, weights size: %d",
+			update.Source, update.Age, len(update.Weights))
+		me.data.incomingChan <- w
 	}
 }
 
@@ -100,11 +128,35 @@ func (me *Me) Outgoing() {
 					continue
 				}
 
-				log.Default().Printf("Sending data to %s with len %d", name, len(data))
-				_, err = stream.Write(data)
-				if err != nil {
-					log.Default().Printf("Error sending data to %s: %v", name, err)
+				// Create and marshal the model update
+				update := &ModelUpdate{
+					Source:  me.config.Name,
+					Weights: data.Get(),
+					Age:     int64(data.GetAge()),
 				}
+
+				msgBytes, err := proto.Marshal(update)
+				if err != nil {
+					log.Default().Printf("Error marshaling model update for %s: %v", name, err)
+					continue
+				}
+
+				// Write length prefix
+				lenBuf := make([]byte, 4)
+				binary.BigEndian.PutUint32(lenBuf, uint32(len(msgBytes)))
+				_, err = stream.Write(lenBuf)
+				if err != nil {
+					log.Default().Printf("Error writing message length to %s: %v", name, err)
+					continue
+				}
+
+				// Write the actual message
+				log.Default().Printf("Sending model update to %s with age %d", name, update.Age)
+				_, err = stream.Write(msgBytes)
+				if err != nil {
+					log.Default().Printf("Error sending model update to %s: %v", name, err)
+				}
+				peer.MostRecentUpdate = data.GetAge()
 				stream.Close()
 			}
 		}

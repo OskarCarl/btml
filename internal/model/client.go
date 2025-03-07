@@ -63,12 +63,12 @@ func (c *ModelClient) Eval() (*Metrics, error) {
 	return NewMetrics(res.Accuracy, res.Loss)
 }
 
-func (c *ModelClient) Apply(weights Weights) error {
+func (c *ModelClient) Apply(weights Weights, ratio float32) error {
 	req := &ModelRequest{
 		Request: &ModelRequest_ImportWeights{
 			ImportWeights: &ImportWeightsRequest{
 				Weights:     weights.Get(),
-				WeightRatio: 1.0, // TODO: calculate this
+				WeightRatio: ratio,
 			},
 		},
 	}
@@ -101,7 +101,7 @@ func (c *ModelClient) GetWeights() (Weights, error) {
 	if err != nil {
 		return nil, fmt.Errorf("export weights request failed: %w", err)
 	}
-	return NewSimpleWeights(res.Weights)
+	return NewSimpleWeights(res.Weights), nil
 }
 
 func (c *ModelClient) sendRequest(req *ModelRequest) error {

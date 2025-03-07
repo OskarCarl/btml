@@ -77,9 +77,9 @@ func run(c *peer.Config) int {
 	}
 	defer m.Shutdown()
 
-	go m.Train()
 	me := peer.Start(c, m)
 	defer me.Shutdown()
+	go play(m, me)
 
 	select {
 	case <-sig:
@@ -88,4 +88,12 @@ func run(c *peer.Config) int {
 	case <-me.Ctx.Done():
 		return 2
 	}
+}
+
+func play(m m.Model, peer *peer.Me) {
+	m.Train()
+
+	w, _ := m.GetWeights()
+	peer.WaitReady()
+	peer.Send(w)
 }

@@ -22,6 +22,7 @@ type Model interface {
 
 type SimpleModel struct {
 	client  *ModelClient
+	age     int
 	command *exec.Cmd
 }
 
@@ -46,15 +47,18 @@ func (m *SimpleModel) Train() error {
 	if err != nil {
 		return fmt.Errorf("failed to train model: %w", err)
 	}
-	log.Default().Printf("Trained model; loss: %f", met.loss)
+	m.age++
+	log.Default().Printf("Trained model to age %d; loss: %f", m.age, met.loss)
 	return nil
 }
 
 func (m *SimpleModel) Apply(weights Weights) error {
-	if err := m.client.Apply(weights); err != nil {
-		return fmt.Errorf("failed to apply weigths to model: %w", err)
+	ratio := getRatio(m, weights)
+	if err := m.client.Apply(weights, ratio); err != nil {
+		return fmt.Errorf("failed to apply weights to model: %w", err)
 	}
 	log.Default().Print("Applied weights to model")
+	updateAge(m, weights)
 	return nil
 }
 
@@ -64,6 +68,7 @@ func (m *SimpleModel) GetWeights() (Weights, error) {
 		return nil, fmt.Errorf("failed to fetch weights from model: %w", err)
 	}
 	log.Default().Print("Got weights from model")
+	w.setAge(m.age)
 	return w, nil
 }
 
@@ -134,4 +139,16 @@ func resolveLogPath(c *Config) (string, error) {
 	} else {
 		return "", fmt.Errorf("unable to determine log file path: %w", err)
 	}
+}
+
+// getRatio calculates the ratio of the model's own age as used by the Python model.
+func getRatio(m *SimpleModel, weights Weights) float32 {
+	ratio := float32(m.age) / (float32(m.age) + float32(weights.GetAge()))
+	return ratio
+}
+
+// updateAge updates the model's age to the maximum of the current and the weights age.
+func updateAge(m *SimpleModel, weights Weights) {
+	tmp := max(m.age, weights.GetAge())
+	m.age = tmp
 }
