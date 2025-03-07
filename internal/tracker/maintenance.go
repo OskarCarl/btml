@@ -27,7 +27,9 @@ func (t *Tracker) processTouches() {
 		select {
 		// We can assume the touches to be in the order they occurred
 		case individualTouch := <-t.touchlist:
-			t.peers.List[individualTouch.peer].LastSeen = individualTouch.t
+			if p, ok := t.peers.List[individualTouch.peer]; ok {
+				p.LastSeen = individualTouch.t
+			}
 		default:
 			return
 		}

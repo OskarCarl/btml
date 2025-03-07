@@ -1,107 +1,77 @@
 package peer
 
 import (
-	"errors"
+	"context"
+	"crypto/tls"
 	"log"
 	"net"
 	"sync"
 	"time"
-)
 
-var me = new(Me)
+	"github.com/quic-go/quic-go"
+)
 
 // Me is the peer we use
 type Me struct {
-	config    *Config
-	localAddr *net.UDPAddr
-	server    net.PacketConn
-	tracker   *Tracker
-	peerset   *PeerSet
+	Wg         sync.WaitGroup
+	Ctx        context.Context
+	cancel     context.CancelFunc
+	config     *Config
+	quicConfig *quic.Config
+	localAddr  net.Addr
+	server     *quic.Transport
+	tlsConfig  *tls.Config
+	tracker    *Tracker
+	peerset    *PeerSet
+	conns      sync.Map // map[string]quic.Connection
+	data       struct {
+		incomingChan chan []byte
+		outgoingChan chan []byte
+	}
 }
 
-type incomingPacket struct {
-	data []byte
-	from net.Addr
+func NewMe(config *Config) *Me {
+	ctx, cancel := context.WithCancel(context.Background())
+	return &Me{
+		Wg:     sync.WaitGroup{},
+		Ctx:    ctx,
+		cancel: cancel,
+		config: config,
+		quicConfig: &quic.Config{
+			KeepAlivePeriod: time.Second * 10,
+			MaxIdleTimeout:  time.Second * 60,
+		},
+		conns:     sync.Map{},
+		tlsConfig: generateTLSConfig(),
+		data: struct {
+			incomingChan chan []byte
+			outgoingChan chan []byte
+		}{
+			incomingChan: make(chan []byte, 10),
+			outgoingChan: make(chan []byte, 5),
+		},
+	}
 }
 
-func (l *Me) Setup() {
-	server, err := net.ListenPacket("udp", ":0")
+func (me *Me) Setup() {
+	addr, err := net.ResolveUDPAddr("udp", ":0")
 	if err != nil {
-		log.Default().Panicf("Error listening for packets: %v\n", err)
+		log.Default().Panicf("Error resolving UDP address: %v\n", err)
 	}
-	l.localAddr, _ = net.ResolveUDPAddr(server.LocalAddr().Network(), server.LocalAddr().String())
-	l.server = server
-	log.Default().Printf("Listening on %s", l.localAddr.String())
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		log.Default().Panicf("Error listening on UDP address: %v\n", err)
+	}
+	listener := &quic.Transport{
+		Conn: conn,
+	}
+	me.server = listener
+	me.localAddr = conn.LocalAddr()
+	log.Default().Printf("QUIC listener started on %s", me.localAddr.String())
 }
 
-func (l *Me) Listen(wg *sync.WaitGroup, quit chan struct{}) {
-	defer func() {
-		l.server.Close()
-		wg.Done()
-	}()
-	var (
-		dchan = make(chan incomingPacket, 10)
-		d     incomingPacket
-	)
-
-	go l.listen(dchan)
-	for {
-		select {
-		case <-quit:
-			log.Default().Print("Stopping the listener...")
-			return
-		case d = <-dchan:
-			log.Default().Printf("Received packet from %s with len %d", d.from, len(d.data))
-		}
-	}
-}
-
-func (l *Me) listen(dchan chan incomingPacket) {
-	p := make([]byte, 1024)
-	for {
-		n, addr, err := l.server.ReadFrom(p)
-		if err != nil {
-			if errors.Is(err, net.ErrClosed) {
-				return
-			}
-			log.Default().Printf("Error when reading packet from %s: %v", addr, err)
-			log.Default().Print("Continuing...")
-		}
-		d := make([]byte, n)
-		log.Default().Print("Got packet")
-		copy(d, p[:n])
-		packet := incomingPacket{
-			from: addr,
-			data: d,
-		}
-		dchan <- packet
-	}
-}
-
-func (l *Me) Outgoing(dc chan []byte, wg *sync.WaitGroup, quit chan struct{}) {
-	defer wg.Done()
-	var (
-		d   []byte
-		err error
-	)
-	for {
-		select {
-		case <-quit:
-			return
-		case d = <-dc:
-			time.Sleep(time.Second * 20)
-			for name, peer := range l.peerset.Active {
-				n := 0
-				log.Default().Printf("Sending data to %s with len %d", name, len(d))
-				for n < len(d) {
-					n, err = l.server.WriteTo(d, peer.P.Addr)
-					// We might get an error here during shutdown when the server is closed by the listener.
-					if err != nil {
-						log.Default().Printf("Encountered an error when writing %d bytes to %s:\n%v", n, name, err)
-						break
-					}
-				}
-			}
-		}
-	}
+func (me *Me) Shutdown() {
+	me.cancel()
+	me.tracker.Leave()
+	me.Wg.Wait()
 }

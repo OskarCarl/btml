@@ -2,10 +2,12 @@ package peer
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/vs-ude/btml/internal/structs"
@@ -77,4 +79,31 @@ func getResponseBody(resp *http.Response) (*[]byte, error) {
 	}
 	body := buf.Bytes()
 	return &body, nil
+}
+
+// periodicUpdate periodically updates the peer list from the tracker.
+// This has the side effect of pinging the tracker so it knows we are alive.
+func (t *Tracker) periodicUpdate(wg *sync.WaitGroup, ctx context.Context) {
+	defer wg.Done()
+	timer := time.NewTimer(time.Second * 3)
+	errCount := 0
+	for {
+		select {
+		case <-timer.C:
+			err := t.Update()
+			if err != nil {
+				errCount++
+				log.Default().Printf("Error updating peers from the tracker: %v\n", err)
+				if errCount >= 3 {
+					log.Default().Printf("Too many consecutive errors updating peers from the tracker, stopping periodic updates\n")
+					return
+				}
+			} else {
+				errCount = 0
+			}
+			timer.Reset(t.UpdateFreq)
+		case <-ctx.Done():
+			return
+		}
+	}
 }

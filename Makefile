@@ -32,6 +32,10 @@ setup-model:
 internal/model/peer-model.pb.go: protocols/peer-model.proto
 	protoc --go_out=. -Iprotocols/ peer-model.proto
 
+prep-kernel:
+	sysctl -w net.core.rmem_max=7500000
+	sysctl -w net.core.wmem_max=7500000
+
 %/:
 	mkdir -p $@
 

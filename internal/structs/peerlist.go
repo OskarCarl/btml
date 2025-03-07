@@ -50,7 +50,7 @@ func (pl *Peerlist) Has(p string) bool {
 }
 
 // Unmarshal parses the byte array into a Peerlist.
-// The list of peers is only persisted if unmarshalling was successful.
+// The list of peers is only persisted if unmarshaling was successful.
 func (pl *Peerlist) Unmarshal(b []byte) error {
 	tmp := make(map[string]*Peer)
 	err := json.Unmarshal(b, &tmp)

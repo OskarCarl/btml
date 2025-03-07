@@ -1,6 +1,7 @@
 package structs
 
 import (
+	"fmt"
 	"net"
 	"time"
 )
@@ -13,7 +14,7 @@ type Peer struct {
 }
 
 func (p *Peer) String() string {
-	return p.Name
+	return fmt.Sprintf("%s (%s)", p.Name, p.Addr.String())
 }
 
 // Copy returns an independent deep copy of the Peer struct.

@@ -4,44 +4,43 @@ import (
 	"crypto/rand"
 	"log"
 	"math/big"
-	"sync"
+	"net"
 	"time"
 
 	"github.com/vs-ude/btml/internal/model"
 	"github.com/vs-ude/btml/internal/structs"
 )
 
-func Start(c *Config, m model.Model) {
-	me.config = c
+func Start(c *Config, m model.Model) *Me {
+	me := NewMe(c)
 	me.Setup()
 	self := &structs.Peer{
 		Name:        c.Name,
 		Fingerprint: "abbabbaba",
 	}
-	self.Addr = me.localAddr
+	self.Addr = me.localAddr.(*net.UDPAddr)
 
-	tracker := &Tracker{
+	me.tracker = &Tracker{
 		URL:        c.TrackerURL,
 		UpdateFreq: c.UpdateFreq,
 	}
-	tracker.Setup(c, self)
-	defer tracker.Leave()
+	me.tracker.Setup(c, self)
 
-	// Closing this channel signals the other routines to stop.
-	quit := make(chan struct{})
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go periodicUpdate(tracker, wg, quit)
-
-	me.tracker = tracker
 	me.peerset = NewPeerSet()
-	wg.Add(1)
-	go me.Listen(wg, quit)
+	me.Wg.Add(1)
+	go me.Listen()
 
-	outgoingDataChan := make(chan []byte, 20)
-	wg.Add(1)
-	go me.Outgoing(outgoingDataChan, wg, quit)
+	me.Wg.Add(1)
+	go me.tracker.periodicUpdate(&me.Wg, me.Ctx)
 
+	me.Wg.Add(1)
+	go me.Outgoing()
+
+	return me
+}
+
+func (me *Me) Ping(dc chan []byte) {
+	// for {
 	for len(me.tracker.Peers.List) < 1 {
 		time.Sleep(time.Second * 2)
 	}
@@ -53,39 +52,9 @@ func Start(c *Config, m model.Model) {
 		me.peerset.Add(p)
 		num++
 	}
-
-	go m.Train()
-	go ping(outgoingDataChan)
-
-	time.Sleep(time.Second * 60)
-	close(quit)
-	wg.Wait()
-}
-
-func ping(dc chan []byte) {
-	for {
-		wait, _ := rand.Int(rand.Reader, big.NewInt(5))
-		time.Sleep(time.Second * time.Duration(big.NewInt(0).Add(wait, big.NewInt(2)).Int64()))
-		dc <- []byte{0xff, 0xaf}
-	}
-}
-
-// periodicUpdate periodically updates the peer list from the tracker.
-// This has the side effect of pinging the tracker so it knows we are alive.
-func periodicUpdate(t *Tracker, wg *sync.WaitGroup, done chan struct{}) {
-	defer wg.Done()
-	timer := time.NewTimer(time.Second)
-	for {
-		select {
-		case <-timer.C:
-			err := t.Update()
-			if err != nil {
-				log.Default().Printf("Error updating peers from the tracker: %v\n", err)
-				return
-			}
-			timer.Reset(t.UpdateFreq)
-		case <-done:
-			return
-		}
-	}
+	wait, _ := rand.Int(rand.Reader, big.NewInt(5))
+	time.Sleep(time.Second * time.Duration(big.NewInt(0).Add(wait, big.NewInt(2)).Int64()))
+	log.Default().Printf("Sending ping")
+	dc <- []byte{0xff, 0xaf}
+	// }
 }

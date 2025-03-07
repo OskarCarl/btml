@@ -1,12 +1,19 @@
 package peer
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"math/big"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/quic-go/quic-go"
 	"github.com/vs-ude/btml/internal/model"
 	"github.com/vs-ude/btml/internal/structs"
 )
@@ -40,4 +47,39 @@ func Autoconf(c *Config) error {
 	c.ModelConf.Name = c.Name
 
 	return nil
+}
+
+func generateQUICConfig() *quic.Config {
+	return &quic.Config{
+		KeepAlivePeriod: time.Second * 15,
+		MaxIdleTimeout:  time.Second * 60,
+	}
+}
+
+func generateTLSConfig() *tls.Config {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		panic(err)
+	}
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().Add(time.Hour * 24 * 180),
+	}
+	certDER, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	if err != nil {
+		panic(err)
+	}
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)})
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certDER})
+
+	tlsCert, err := tls.X509KeyPair(certPEM, keyPEM)
+	if err != nil {
+		panic(err)
+	}
+	return &tls.Config{
+		Certificates:       []tls.Certificate{tlsCert},
+		InsecureSkipVerify: true,
+		NextProtos:         []string{"btml"},
+	}
 }

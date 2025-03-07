@@ -4,9 +4,12 @@ import (
 	"crypto/rand"
 	"flag"
 	"fmt"
+	"log"
 	"math/big"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/vs-ude/btml/internal/logging"
@@ -60,11 +63,29 @@ func main() {
 	logging.Logger.SetPrefix("[PEER " + c.Name + "]")
 	logging.Logger.Use()
 
+	os.Exit(run(c))
+}
+
+func run(c *peer.Config) int {
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+
 	m, err := m.NewSimpleModel(c.ModelConf)
 	if err != nil {
 		fmt.Printf("Failed to create model: %v\n", err)
 		os.Exit(1)
 	}
+	defer m.Shutdown()
 
-	peer.Start(c, m)
+	go m.Train()
+	me := peer.Start(c, m)
+	defer me.Shutdown()
+
+	select {
+	case <-sig:
+		log.Default().Println("Peer is terminating")
+		return 0
+	case <-me.Ctx.Done():
+		return 2
+	}
 }

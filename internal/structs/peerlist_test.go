@@ -3,6 +3,7 @@ package structs_test
 import (
 	"net"
 	"testing"
+	"time"
 
 	s "github.com/vs-ude/btml/internal/structs"
 )
@@ -55,15 +56,19 @@ func TestUnmarshalShouldError(t *testing.T) {
 func buildInput() *s.Peerlist {
 	addr1, _ := net.ResolveUDPAddr("udp", ":43439")
 	addr2, _ := net.ResolveUDPAddr("udp", "localhost:62123")
+	time1, _ := time.Parse("yyyy-mm-dd hh:mm", "1999-12-31 23:59")
+	time2, _ := time.Parse("yyyy-mm-dd hh:mm", "2000-01-01 00:00")
 	a := &s.Peer{
 		Name:        "a",
 		Addr:        addr1,
 		Fingerprint: "akljsdh",
+		LastSeen:    time1,
 	}
 	b := &s.Peer{
 		Name:        "b",
 		Addr:        addr2,
 		Fingerprint: "lkjajf",
+		LastSeen:    time2,
 	}
 	return &s.Peerlist{
 		List: map[string]*s.Peer{
@@ -83,16 +88,12 @@ func equal(t *testing.T, a, b *s.Peer) bool {
 		t.Logf("Fingerprints do not match: %s != %s", a.Fingerprint, b.Fingerprint)
 		ret = false
 	}
-	if !a.Addr.IP.Equal(b.Addr.IP) {
-		t.Logf("Addr.IPs do not match: %v != %v", a.Addr.IP, b.Addr.IP)
+	if a.Addr.String() != b.Addr.String() {
+		t.Logf("Addrs do not match: %v != %v", a.Addr.String(), b.Addr.String())
 		ret = false
 	}
-	if a.Addr.Port != b.Addr.Port {
-		t.Logf("Addr.Ports do not match: %d != %d", a.Addr.Port, b.Addr.Port)
-		ret = false
-	}
-	if a.Addr.Zone != b.Addr.Zone {
-		t.Logf("Addr.Zones do not match: %s != %s", a.Addr.Zone, b.Addr.Zone)
+	if a.Addr.Network() != b.Addr.Network() {
+		t.Logf("Addr.Networks do not match: %s != %s", a.Addr.Network(), b.Addr.Network())
 		ret = false
 	}
 	return ret

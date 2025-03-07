@@ -30,7 +30,7 @@ func main() {
 		os.Exit(1)
 	}
 	// Ensure cleanup on exit
-	defer m.Close()
+	defer m.Shutdown()
 
 	// Train the model
 	if err := m.Train(); err != nil {

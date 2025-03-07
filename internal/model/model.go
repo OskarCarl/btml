@@ -17,7 +17,7 @@ type Model interface {
 	Train() error
 	Apply(Weights) error
 	GetWeights() (Weights, error)
-	Close() error
+	Shutdown()
 }
 
 type SimpleModel struct {
@@ -25,10 +25,11 @@ type SimpleModel struct {
 	command *exec.Cmd
 }
 
-func (m *SimpleModel) Close() error {
+func (m *SimpleModel) Shutdown() {
 	m.client.Close()
 	m.command.Process.Signal(syscall.SIGTERM)
-	return nil
+	m.command.Wait()
+	log.Default().Println("Model stopped")
 }
 
 func (m *SimpleModel) Eval() error {

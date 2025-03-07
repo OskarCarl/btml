@@ -13,8 +13,9 @@ import (
 )
 
 func (t *Tracker) list(w http.ResponseWriter, r *http.Request) {
-	t.touchlist <- touch{r.Header.Get("peer-id"), time.Now()}
-	data, _ := t.peers.Marshal()
+	id := r.Header.Get("peer-id")
+	t.touchlist <- touch{id, time.Now()}
+	data, _ := t.getPeerList(id).Marshal()
 	w.Write(data)
 }
 
@@ -59,6 +60,10 @@ func getPeer(r *http.Request) (*structs.Peer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse request body data from %s: %s\n%w", r.RemoteAddr, r.RequestURI, err)
 	}
+	// peer.Addr, err = net.ResolveUDPAddr("udp", r.RemoteAddr)
+	// if err != nil {
+	// return nil, fmt.Errorf("unable to resolve address %s: %s\n%w", r.RemoteAddr, err.Error(), err)
+	// }
 	return &peer, nil
 }
 
@@ -66,20 +71,22 @@ func getPeer(r *http.Request) (*structs.Peer, error) {
 // Tracker.conf.MaxReturnPeers are available, it will return all peers,
 // otherwise it will return a randomized list of peers.
 // The result may include peers that have already left the swarm.
-func (t *Tracker) getPeerList() *structs.Peerlist {
-	if t.peers.Len() <= t.conf.Tracker.MaxReturnPeers {
+func (t *Tracker) getPeerList(skipId string) *structs.Peerlist {
+	if t.peers.Len() <= t.conf.Tracker.MaxReturnPeers+1 {
 		t.processAddedPeers()
-		return t.peers
 	}
 
 	i := t.conf.Tracker.MaxReturnPeers
-	pl := &structs.Peerlist{}
+	pl := structs.NewPeerList()
 	t.peers.Lock()
 	defer t.peers.Unlock()
 	// Pseudo-random iteration order is the default in Go
 	for _, p := range t.peers.List {
 		if i == 0 {
 			break
+		}
+		if p.Name == skipId {
+			continue
 		}
 		// No need to lock as we are the only ones accessing _this_ peerlist.
 		// We deep copy to prevent invalid accesses later during marshaling.
