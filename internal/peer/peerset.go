@@ -45,7 +45,7 @@ func (ps *PeerSet) Add(p *structs.Peer) error {
 	case status == CHOKED:
 		return fmt.Errorf("peer is known and choked")
 	case status == UNCHOKED || status == UNKNOWN:
-		ps.Active[p.String()] = &KnownPeer{S: 0, P: p.Copy()}
+		ps.Active[p.Name] = &KnownPeer{S: 0, P: p.Copy()}
 	}
 	return nil
 }
@@ -82,8 +82,9 @@ func (ps *PeerSet) GetWorstUnchoked(n int) []string {
 	return keys[:n]
 }
 
-func (ps *PeerSet) Unchoke(n int) {
-	// TODO: implement
+func (ps *PeerSet) Unchoke(p string) {
+	ps.Active[p] = ps.Choked[p]
+	delete(ps.Choked, p)
 }
 
 func (ps *PeerSet) GetBestChoked(n int) []string {
@@ -93,7 +94,7 @@ func (ps *PeerSet) GetBestChoked(n int) []string {
 
 // CheckPeer verifies whether the given peer is new or if it is a legitimate replacement for a known one.
 func (ps *PeerSet) CheckPeer(new *structs.Peer) (peerStatus, error) {
-	if p, ok := ps.Active[new.String()]; ok {
+	if p, ok := ps.Active[new.Name]; ok {
 		// TODO: properly verify the fingerprint
 		if p.P.Fingerprint == new.Fingerprint {
 			return UNCHOKED, nil
@@ -101,7 +102,7 @@ func (ps *PeerSet) CheckPeer(new *structs.Peer) (peerStatus, error) {
 			return ERR, fmt.Errorf("unchoked peer exists and the new one has a non-matching fingerprint")
 		}
 	}
-	if p, ok := ps.Choked[new.String()]; ok {
+	if p, ok := ps.Choked[new.Name]; ok {
 		// TODO: properly verify the fingerprint and check the score
 		if p.P.Fingerprint == new.Fingerprint {
 			return CHOKED, nil

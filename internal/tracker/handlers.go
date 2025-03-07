@@ -43,7 +43,7 @@ func (t *Tracker) leave(w http.ResponseWriter, r *http.Request) {
 		log.Default().Println("Error:", err.Error())
 		return
 	}
-	t.removelist <- peer.String()
+	t.removelist <- peer.Name
 	w.WriteHeader(http.StatusOK)
 	log.Default().Printf("Removed %s from the list of peers in the swarm\n", peer)
 }
@@ -91,7 +91,7 @@ func (t *Tracker) getPeerList(skipId string) *structs.Peerlist {
 		// No need to lock as we are the only ones accessing _this_ peerlist.
 		// We deep copy to prevent invalid accesses later during marshaling.
 		// This may be too slow for large swarms with frequent requests.
-		pl.List[p.String()] = p.Copy()
+		pl.List[p.Name] = p.Copy()
 		i--
 	}
 	return pl

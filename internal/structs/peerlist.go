@@ -3,6 +3,8 @@ package structs
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
+	"slices"
 	"sync"
 	"time"
 )
@@ -20,18 +22,20 @@ func NewPeerList() *Peerlist {
 
 func (pl *Peerlist) Add(p *Peer) {
 	pl.Lock()
-	pl.List[p.String()] = p
+	pl.List[p.Name] = p
 	pl.Unlock()
 }
 
 func (pl *Peerlist) Remove(p *Peer) {
 	pl.Lock()
-	delete(pl.List, p.String())
+	delete(pl.List, p.Name)
 	pl.Unlock()
 }
 
 func (pl *Peerlist) String() string {
-	return fmt.Sprintf("%v", pl.List)
+	sl := slices.Collect(maps.Keys(pl.List))
+	slices.Sort(sl)
+	return fmt.Sprintf("%v", sl)
 }
 
 func (pl *Peerlist) Len() int {

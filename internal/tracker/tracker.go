@@ -11,7 +11,7 @@ import (
 
 type touch struct {
 	peer string
-	t    time.Time
+	ts   time.Time
 }
 
 type Tracker struct {

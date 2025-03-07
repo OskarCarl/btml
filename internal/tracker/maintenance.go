@@ -28,7 +28,7 @@ func (t *Tracker) processTouches() {
 		// We can assume the touches to be in the order they occurred
 		case individualTouch := <-t.touchlist:
 			if p, ok := t.peers.List[individualTouch.peer]; ok {
-				p.LastSeen = individualTouch.t
+				p.LastSeen = individualTouch.ts
 			}
 		default:
 			return
@@ -55,7 +55,7 @@ func (t *Tracker) processAddedPeers() {
 	for {
 		select {
 		case peer := <-t.newlist:
-			t.peers.List[peer.String()] = peer
+			t.peers.List[peer.Name] = peer
 		default:
 			return
 		}
