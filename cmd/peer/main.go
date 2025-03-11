@@ -71,7 +71,7 @@ func run(c *peer.Config) int {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
-	m, err := m.NewSimpleModel(c.ModelConf)
+	m, err := m.NewModel(c.ModelConf)
 	if err != nil {
 		fmt.Printf("Failed to create model: %v\n", err)
 		os.Exit(1)
@@ -85,7 +85,7 @@ func run(c *peer.Config) int {
 
 	me := peer.Start(c, m)
 	defer me.Shutdown()
-	go play(m, me)
+	go localPlay(m, me)
 
 	select {
 	case <-sig:
@@ -96,8 +96,8 @@ func run(c *peer.Config) int {
 	}
 }
 
-func play(m m.Model, peer *peer.Me) {
 	m.Train()
+func localPlay(m *m.Model, peer *peer.Me) {
 
 	w, _ := m.GetWeights()
 	peer.WaitReady()

@@ -19,7 +19,7 @@ func main() {
 		LogPath:       "",
 		Dataset:       "fMNIST",
 	}
-	mod, err := model.NewSimpleModel(mconf)
+	mod, err := model.NewModel(mconf)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

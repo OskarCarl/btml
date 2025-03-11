@@ -9,11 +9,11 @@ import (
 
 type Play struct {
 	me    *peer.Me
-	mod   model.Model
+	mod   *model.Model
 	steps []Step
 }
 
-func NewPlay(me *peer.Me, mod model.Model) *Play {
+func NewPlay(me *peer.Me, mod *model.Model) *Play {
 	return &Play{me, mod, []Step{}}
 }
 

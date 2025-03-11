@@ -24,7 +24,7 @@ func main() {
 		LogPath:       "logs/model.log",
 	}
 	// Create a new model instance
-	m, err := model.NewSimpleModel(c)
+	m, err := model.NewModel(c)
 	if err != nil {
 		log.Printf("Failed to create model: %v", err)
 		os.Exit(1)

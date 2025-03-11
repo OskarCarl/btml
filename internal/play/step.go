@@ -12,7 +12,7 @@ import (
 
 type Step interface {
 	Setup(string) error
-	Run(*peer.Me, model.Model) error
+	Run(*peer.Me, *model.Model) error
 }
 
 type Train struct {
@@ -22,7 +22,7 @@ func (t *Train) Setup(_ string) error {
 	return nil
 }
 
-func (t *Train) Run(_ *peer.Me, mod model.Model) error {
+func (t *Train) Run(_ *peer.Me, mod *model.Model) error {
 	log.Default().Println("Training model")
 	mod.Train()
 	return nil
@@ -35,7 +35,7 @@ func (t *Eval) Setup(_ string) error {
 	return nil
 }
 
-func (t *Eval) Run(_ *peer.Me, mod model.Model) error {
+func (t *Eval) Run(_ *peer.Me, mod *model.Model) error {
 	log.Default().Println("Evaluating model")
 	mod.Eval()
 	return nil
@@ -50,7 +50,7 @@ func (w *Wait) Setup(in string) error {
 	return nil
 }
 
-func (w *Wait) Run(_ *peer.Me, _ model.Model) error {
+func (w *Wait) Run(_ *peer.Me, _ *model.Model) error {
 	log.Default().Printf("Waiting %s", w.T)
 	time.Sleep(w.T)
 	return nil
@@ -66,6 +66,6 @@ func (c *Collect) Setup(in string) error {
 	return nil
 }
 
-func (c *Collect) Run(_ *peer.Me, mod model.Model) error {
+func (c *Collect) Run(_ *peer.Me, mod *model.Model) error {
 	return errors.New("not implemented")
 }

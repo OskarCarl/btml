@@ -8,29 +8,22 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
-type Model interface {
-	Start() error
-	Eval() error
-	Train() error
-	Apply(Weights) error
-	GetWeights() (Weights, error)
-	Shutdown()
-}
-
-type SimpleModel struct {
+type Model struct {
 	client *ModelClient
 	age    int
+	sync.Mutex
 }
 
-func (m *SimpleModel) Shutdown() {
+func (m *Model) Shutdown() {
 	m.client.Close()
 	log.Default().Println("Model stopped")
 }
 
-func (m *SimpleModel) Eval() error {
+func (m *Model) Eval() error {
 	met, err := m.client.Eval()
 	if err != nil {
 		return fmt.Errorf("failed to evaluate model: %w", err)
@@ -39,7 +32,7 @@ func (m *SimpleModel) Eval() error {
 	return nil
 }
 
-func (m *SimpleModel) Train() error {
+func (m *Model) Train() error {
 	met, err := m.client.Train()
 	if err != nil {
 		return fmt.Errorf("failed to train model: %w", err)
@@ -49,7 +42,7 @@ func (m *SimpleModel) Train() error {
 	return nil
 }
 
-func (m *SimpleModel) Apply(weights Weights) error {
+func (m *Model) Apply(weights Weights) error {
 	ratio := getRatio(m, weights)
 	if err := m.client.Apply(weights, ratio); err != nil {
 		return fmt.Errorf("failed to apply weights to model: %w", err)
@@ -59,7 +52,7 @@ func (m *SimpleModel) Apply(weights Weights) error {
 	return nil
 }
 
-func (m *SimpleModel) GetWeights() (Weights, error) {
+func (m *Model) GetWeights() (Weights, error) {
 	w, err := m.client.GetWeights()
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch weights from model: %w", err)
@@ -71,7 +64,7 @@ func (m *SimpleModel) GetWeights() (Weights, error) {
 
 // NewModel creates a new Model instance by starting the Python process
 // and establishing a connection to it
-func NewSimpleModel(c *Config) (Model, error) {
+func NewModel(c *Config) (*Model, error) {
 	// Create a random socket path in /tmp
 	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("btml-model-%d.sock", time.Now().Unix()))
 
@@ -91,7 +84,7 @@ func NewSimpleModel(c *Config) (Model, error) {
 	}
 	cmd := exec.Command(c.PythonRuntime, args...)
 	cmd.Dir = c.ModelPath
-	return &SimpleModel{
+	return &Model{
 		client: &ModelClient{
 			cmd:        cmd,
 			socketPath: socketPath,
@@ -100,7 +93,7 @@ func NewSimpleModel(c *Config) (Model, error) {
 	}, nil
 }
 
-func (m *SimpleModel) Start() error {
+func (m *Model) Start() error {
 	log.Default().Printf("Starting Python process: %s (cwd: %s)", m.client.cmd.String(), m.client.cmd.Dir)
 	if err := m.client.cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start Python process: %w", err)
@@ -141,13 +134,13 @@ func resolveLogPath(c *Config) (string, error) {
 }
 
 // getRatio calculates the ratio of the model's own age as used by the Python model.
-func getRatio(m *SimpleModel, weights Weights) float32 {
+func getRatio(m *Model, weights Weights) float32 {
 	ratio := float32(m.age) / (float32(m.age) + float32(weights.GetAge()))
 	return ratio
 }
 
 // updateAge updates the model's age to the maximum of the current and the weights age.
-func updateAge(m *SimpleModel, weights Weights) {
+func updateAge(m *Model, weights Weights) {
 	tmp := max(m.age, weights.GetAge())
 	m.age = tmp
 }

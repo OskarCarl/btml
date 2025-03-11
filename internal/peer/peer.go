@@ -8,7 +8,7 @@ import (
 	"github.com/vs-ude/btml/internal/structs"
 )
 
-func Start(c *Config, m model.Model) *Me {
+func Start(c *Config, m *model.Model) *Me {
 	me := NewMe(c)
 	me.Setup()
 	self := &structs.Peer{
