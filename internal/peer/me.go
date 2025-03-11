@@ -12,6 +12,12 @@ import (
 	"github.com/vs-ude/btml/internal/model"
 )
 
+type storage struct {
+	incomingChan    chan model.Weights
+	outgoingChan    chan model.Weights
+	outgoingStorage map[int]model.Weights
+}
+
 // Me is the peer we use
 type Me struct {
 	Wg         sync.WaitGroup
@@ -25,10 +31,7 @@ type Me struct {
 	tracker    *Tracker
 	peerset    *PeerSet
 	conns      sync.Map // map[string]quic.Connection
-	data       struct {
-		incomingChan chan model.Weights
-		outgoingChan chan model.Weights
-	}
+	data       storage
 }
 
 func NewMe(config *Config) *Me {
@@ -44,12 +47,10 @@ func NewMe(config *Config) *Me {
 		},
 		conns:     sync.Map{},
 		tlsConfig: generateTLSConfig(),
-		data: struct {
-			incomingChan chan model.Weights
-			outgoingChan chan model.Weights
-		}{
-			incomingChan: make(chan model.Weights, 10),
-			outgoingChan: make(chan model.Weights, 5),
+		data: storage{
+			incomingChan:    make(chan model.Weights, 10),
+			outgoingChan:    make(chan model.Weights, 5),
+			outgoingStorage: make(map[int]model.Weights),
 		},
 	}
 }
