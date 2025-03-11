@@ -75,6 +75,11 @@ func run(c *peer.Config) int {
 		fmt.Printf("Failed to create model: %v\n", err)
 		os.Exit(1)
 	}
+	err = m.Start()
+	if err != nil {
+		fmt.Printf("Failed to start model: %v\n", err)
+		os.Exit(1)
+	}
 	defer m.Shutdown()
 
 	me := peer.Start(c, m)

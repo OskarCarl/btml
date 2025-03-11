@@ -8,11 +8,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 )
 
 type Model interface {
+	Start() error
 	Eval() error
 	Train() error
 	Apply(Weights) error
@@ -21,15 +21,12 @@ type Model interface {
 }
 
 type SimpleModel struct {
-	client  *ModelClient
-	age     int
-	command *exec.Cmd
+	client *ModelClient
+	age    int
 }
 
 func (m *SimpleModel) Shutdown() {
 	m.client.Close()
-	m.command.Process.Signal(syscall.SIGTERM)
-	m.command.Wait()
 	log.Default().Println("Model stopped")
 }
 
@@ -94,39 +91,41 @@ func NewSimpleModel(c *Config) (Model, error) {
 	}
 	cmd := exec.Command(c.PythonRuntime, args...)
 	cmd.Dir = c.ModelPath
+	return &SimpleModel{
+		client: &ModelClient{
+			cmd:        cmd,
+			socketPath: socketPath,
+		},
+		age: 0,
+	}, nil
+}
 
-	log.Default().Printf("Starting Python process: %s", cmd.String())
-	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("failed to start Python process: %w", err)
+func (m *SimpleModel) Start() error {
+	log.Default().Printf("Starting Python process: %s (cwd: %s)", m.client.cmd.String(), m.client.cmd.Dir)
+	if err := m.client.cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start Python process: %w", err)
 	}
 
 	// Try to connect to the socket with retries
 	var conn net.Conn
 	var err error
 	for range 10 {
-		conn, err = net.Dial("unix", socketPath)
+		conn, err = net.Dial("unix", m.client.socketPath)
 		if err == nil {
 			break
 		}
 		time.Sleep(time.Second)
 	}
 	if err != nil {
-		cmd.Process.Kill()
-		cmd.Wait()
-		os.Remove(socketPath)
-		return nil, fmt.Errorf("failed to connect to socket: %w", err)
+		m.client.cmd.Process.Kill()
+		m.client.cmd.Wait()
+		os.Remove(m.client.socketPath)
+		return fmt.Errorf("failed to connect to socket: %w", err)
 	}
 
-	m := &SimpleModel{
-		client: &ModelClient{
-			socketPath: socketPath,
-			conn:       conn,
-			cmd:        cmd,
-		},
-		command: cmd,
-	}
+	m.client.conn = conn
 
-	return m, nil
+	return nil
 }
 
 func resolveLogPath(c *Config) (string, error) {

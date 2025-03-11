@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os/exec"
+	"syscall"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -21,6 +22,10 @@ type ModelClient struct {
 func (c *ModelClient) Close() error {
 	if c.conn != nil {
 		return c.conn.Close()
+	}
+	if c.cmd != nil {
+		c.cmd.Process.Signal(syscall.SIGTERM)
+		c.cmd.Wait()
 	}
 	return nil
 }
