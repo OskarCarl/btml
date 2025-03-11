@@ -23,6 +23,7 @@ type Config struct {
 	TrackerURL string
 	UpdateFreq time.Duration
 	ModelConf  *model.Config
+	Addr       string
 }
 
 func Autoconf(c *Config) error {
@@ -42,6 +43,7 @@ func Autoconf(c *Config) error {
 	}
 
 	c.Name = strconv.Itoa(whoami.Id)
+	c.Addr = whoami.ExtIp
 	c.UpdateFreq = whoami.UpdateFreq
 	c.ModelConf.Dataset = whoami.Dataset
 	c.ModelConf.Name = c.Name

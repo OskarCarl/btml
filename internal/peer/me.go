@@ -56,7 +56,7 @@ func NewMe(config *Config) *Me {
 }
 
 func (me *Me) Setup() {
-	addr, err := net.ResolveUDPAddr("udp", ":0")
+	addr, err := net.ResolveUDPAddr("udp", me.config.Addr+":0")
 	if err != nil {
 		log.Default().Panicf("Error resolving UDP address: %v\n", err)
 	}

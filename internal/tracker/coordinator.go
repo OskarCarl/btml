@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log"
 	"math/big"
+	"net"
 	"net/http"
 	"strconv"
 
@@ -20,10 +21,12 @@ func (t *Tracker) initPeer(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error getting random unused peer ID: %v", err)
 		return
 	}
+	host, _, _ := net.SplitHostPort(r.RemoteAddr)
 	who := structs.WhoAmI{
 		Id:         i,
 		Dataset:    t.conf.Peer.Dataset,
 		UpdateFreq: t.conf.Peer.UpdateFreq,
+		ExtIp:      host,
 	}
 	buf, _ := json.Marshal(who)
 	w.Write(buf)

@@ -56,6 +56,7 @@ func main() {
 			name = strconv.Itoa(int(i.Int64()))
 		}
 		c.Name = name
+		c.Addr = "127.0.0.1"
 		c.UpdateFreq = time.Second * 10
 		c.ModelConf.Name = name
 	}
