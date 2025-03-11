@@ -1,6 +1,7 @@
 package peer
 
 import (
+	"log"
 	"net"
 	"time"
 
@@ -36,10 +37,8 @@ func Start(c *Config, m *model.Model) *Me {
 	return me
 }
 
-func (me *Me) Send(w model.Weights) {
-	me.data.outgoingChan <- w
-}
-
+// WaitReady waits until we get at least one peer from the tracker. It adds up
+// to 5 peers to the peer set.
 func (me *Me) WaitReady() {
 	for len(me.tracker.Peers.List) < 1 {
 		time.Sleep(time.Second * 2)
@@ -52,4 +51,5 @@ func (me *Me) WaitReady() {
 		me.peerset.Add(p)
 		num++
 	}
+	log.Default().Printf("Ready with %d peers", num)
 }

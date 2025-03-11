@@ -22,7 +22,7 @@ func (me *Me) Listen() {
 		me.Wg.Done()
 	}()
 
-	listener, err := me.server.Listen(me.tlsConfig, generateQUICConfig())
+	listener, err := me.server.Listen(me.tlsConfig, me.quicConfig)
 	if err != nil {
 		log.Default().Printf("Error listening: %v", err)
 		return
@@ -51,7 +51,7 @@ func (me *Me) handleConnection(conn quic.Connection) {
 	}()
 
 	for {
-		stream, err := conn.AcceptStream(context.Background())
+		stream, err := conn.AcceptStream(me.Ctx)
 		if err != nil {
 			log.Default().Printf("Error accepting stream: %v", err)
 			return
@@ -93,7 +93,7 @@ func (me *Me) handleStream(stream quic.Stream) {
 			continue
 		}
 
-		w := model.NewSimpleWeights(update.Weights)
+		w := model.NewWeights(update.Weights)
 
 		log.Default().Printf("Received model update from %s, age: %d, weights size: %d",
 			update.Source, update.Age, len(update.Weights))
@@ -120,7 +120,7 @@ func (me *Me) Outgoing() {
 	}
 }
 
-func (me *Me) sendPeer(data model.Weights, peer *KnownPeer, name string, wg *sync.WaitGroup) {
+func (me *Me) sendPeer(data *model.Weights, peer *KnownPeer, name string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	log.Default().Printf("Connecting to peer %s", name)
 	conn, err := me.getOrEstablishConnection(peer)
@@ -131,7 +131,7 @@ func (me *Me) sendPeer(data model.Weights, peer *KnownPeer, name string, wg *syn
 	log.Default().Printf("Connected to peer %s at %s", name, peer.P.Addr.String())
 
 	// Open a new stream for sending data
-	stream, err := conn.OpenStreamSync(context.Background())
+	stream, err := conn.OpenStreamSync(me.Ctx)
 	if err != nil {
 		log.Default().Printf("Failed to open stream to %s: %v", name, err)
 		return

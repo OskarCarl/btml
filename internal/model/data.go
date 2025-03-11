@@ -4,31 +4,25 @@ import (
 	"errors"
 )
 
-type Weights interface {
-	Get() []byte
-	GetAge() int
-	setAge(int)
-}
-
-type SimpleWeights struct {
+type Weights struct {
 	data []byte
 	age  int
 }
 
-func (w *SimpleWeights) Get() []byte {
+func (w *Weights) Get() []byte {
 	return w.data
 }
 
-func (w *SimpleWeights) setAge(age int) {
+func (w *Weights) setAge(age int) {
 	w.age = age
 }
 
-func (w *SimpleWeights) GetAge() int {
+func (w *Weights) GetAge() int {
 	return w.age
 }
 
-func NewSimpleWeights(d []byte) Weights {
-	return &SimpleWeights{data: d}
+func NewWeights(d []byte) *Weights {
+	return &Weights{data: d}
 }
 
 type Metrics struct {

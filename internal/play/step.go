@@ -56,16 +56,16 @@ func (w *Wait) Run(_ *peer.Me, _ *model.Model) error {
 	return nil
 }
 
-type Collect struct {
+type IncreaseData struct {
 	Ratio float32
 }
 
-func (c *Collect) Setup(in string) error {
+func (c *IncreaseData) Setup(in string) error {
 	f64, _ := strconv.ParseFloat(in, 32)
 	c.Ratio = float32(f64)
 	return nil
 }
 
-func (c *Collect) Run(_ *peer.Me, mod *model.Model) error {
+func (c *IncreaseData) Run(_ *peer.Me, mod *model.Model) error {
 	return errors.New("not implemented")
 }

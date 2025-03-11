@@ -14,8 +14,9 @@ import (
 
 // Model represents a model instance. All actions are executed in series.
 type Model struct {
-	client *ModelClient
-	age    int
+	client                *ModelClient
+	age                   int
+	modelModifiedCallback func(*Weights)
 	sync.Mutex
 }
 
@@ -49,12 +50,13 @@ func (m *Model) Train() error {
 	}
 	m.age++
 	log.Default().Printf("Trained model to age %d; loss: %f", m.age, met.loss)
+	m.executeCallback()
 	return nil
 }
 
 // Apply applies the given weights to the model, does a short training run, and
 // logs the results. It blocks until other operations are completed.
-func (m *Model) Apply(weights Weights) error {
+func (m *Model) Apply(weights *Weights) error {
 	m.Lock()
 	defer m.Unlock()
 	ratio := getRatio(m, weights)
@@ -67,14 +69,20 @@ func (m *Model) Apply(weights Weights) error {
 	}
 	log.Default().Printf("Applied weights to model, loss: %f", met.loss)
 	updateAge(m, weights)
+	m.executeCallback()
 	return nil
 }
 
 // GetWeights fetches the weights from the model and returns them. It blocks
 // until other operations are completed.
-func (m *Model) GetWeights() (Weights, error) {
+func (m *Model) GetWeights() (*Weights, error) {
 	m.Lock()
 	defer m.Unlock()
+	return m.getWeights()
+}
+
+// getWeights assumes that the model is locked.
+func (m *Model) getWeights() (*Weights, error) {
 	w, err := m.client.GetWeights()
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch weights from model: %w", err)
@@ -82,6 +90,19 @@ func (m *Model) GetWeights() (Weights, error) {
 	log.Default().Print("Got weights from model")
 	w.setAge(m.age)
 	return w, nil
+}
+
+// executeCallback runs the callback function if it is set. It uses getWeights
+// so it assumes that the model is locked.
+func (m *Model) executeCallback() {
+	if m.modelModifiedCallback != nil {
+		w, err := m.getWeights()
+		if err != nil {
+			log.Default().Printf("Failed to get weights for callback: %s", err)
+			return
+		}
+		m.modelModifiedCallback(w)
+	}
 }
 
 // NewModel creates a new Model instance by starting the Python process
@@ -110,8 +131,13 @@ func NewModel(c *Config) (*Model, error) {
 			cmd:        cmd,
 			socketPath: socketPath,
 		},
-		age: 0,
+		age:                   1,
+		modelModifiedCallback: nil,
 	}, nil
+}
+
+func (m *Model) SetCallback(callback func(*Weights)) {
+	m.modelModifiedCallback = callback
 }
 
 func (m *Model) Start() error {
@@ -123,12 +149,15 @@ func (m *Model) Start() error {
 	// Try to connect to the socket with retries
 	var conn net.Conn
 	var err error
-	for range 10 {
+	for i := range 10 {
 		conn, err = net.Dial("unix", m.client.socketPath)
 		if err == nil {
 			break
 		}
-		time.Sleep(time.Second)
+		if i < 4 && i > 1 {
+			log.Default().Printf("No response from model, retrying %d/5 ...", i+2)
+		}
+		time.Sleep(time.Second * 2)
 	}
 	if err != nil {
 		m.client.cmd.Process.Kill()
@@ -155,13 +184,13 @@ func resolveLogPath(c *Config) (string, error) {
 }
 
 // getRatio calculates the ratio of the model's own age as used by the Python model.
-func getRatio(m *Model, weights Weights) float32 {
+func getRatio(m *Model, weights *Weights) float32 {
 	ratio := float32(m.age) / (float32(m.age) + float32(weights.GetAge()))
 	return ratio
 }
 
 // updateAge updates the model's age to the maximum of the current and the weights age.
-func updateAge(m *Model, weights Weights) {
+func updateAge(m *Model, weights *Weights) {
 	tmp := max(m.age, weights.GetAge())
 	m.age = tmp
 }
