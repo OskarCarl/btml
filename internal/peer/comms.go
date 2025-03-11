@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/quic-go/quic-go"
@@ -103,20 +104,24 @@ func (me *Me) handleStream(stream quic.Stream) {
 func (me *Me) Outgoing() {
 	defer me.Wg.Done()
 
+	wg := &sync.WaitGroup{}
 	for {
 		select {
 		case <-me.Ctx.Done():
 			return
 		case data := <-me.data.outgoingChan:
+			wg.Wait() // We wait here so the application can be stopped at any time
 			me.data.outgoingStorage[data.GetAge()] = data
 			for name, peer := range me.peerset.Active {
-				go me.sendPeer(data, peer, name)
+				wg.Add(1)
+				go me.sendPeer(data, peer, name, wg)
 			}
 		}
 	}
 }
 
-func (me *Me) sendPeer(data model.Weights, peer *KnownPeer, name string) {
+func (me *Me) sendPeer(data model.Weights, peer *KnownPeer, name string, wg *sync.WaitGroup) {
+	defer wg.Done()
 	log.Default().Printf("Connecting to peer %s", name)
 	conn, err := me.getOrEstablishConnection(peer)
 	if err != nil {

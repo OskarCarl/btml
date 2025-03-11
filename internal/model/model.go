@@ -12,18 +12,24 @@ import (
 	"time"
 )
 
+// Model represents a model instance. All actions are executed in series.
 type Model struct {
 	client *ModelClient
 	age    int
 	sync.Mutex
 }
 
+// Shutdown closes the model client and logs a message. It ignores the lock.
 func (m *Model) Shutdown() {
 	m.client.Close()
 	log.Default().Println("Model stopped")
 }
 
+// Eval evaluates the model and logs the results. It blocks until other
+// operations are completed.
 func (m *Model) Eval() error {
+	m.Lock()
+	defer m.Unlock()
 	met, err := m.client.Eval()
 	if err != nil {
 		return fmt.Errorf("failed to evaluate model: %w", err)
@@ -32,7 +38,11 @@ func (m *Model) Eval() error {
 	return nil
 }
 
+// Train trains the model and logs the results. It blocks until other
+// operations are completed.
 func (m *Model) Train() error {
+	m.Lock()
+	defer m.Unlock()
 	met, err := m.client.Train()
 	if err != nil {
 		return fmt.Errorf("failed to train model: %w", err)
@@ -42,17 +52,29 @@ func (m *Model) Train() error {
 	return nil
 }
 
+// Apply applies the given weights to the model, does a short training run, and
+// logs the results. It blocks until other operations are completed.
 func (m *Model) Apply(weights Weights) error {
+	m.Lock()
+	defer m.Unlock()
 	ratio := getRatio(m, weights)
 	if err := m.client.Apply(weights, ratio); err != nil {
 		return fmt.Errorf("failed to apply weights to model: %w", err)
 	}
-	log.Default().Print("Applied weights to model")
+	met, err := m.client.Train()
+	if err != nil {
+		return fmt.Errorf("failed to train model: %w", err)
+	}
+	log.Default().Printf("Applied weights to model, loss: %f", met.loss)
 	updateAge(m, weights)
 	return nil
 }
 
+// GetWeights fetches the weights from the model and returns them. It blocks
+// until other operations are completed.
 func (m *Model) GetWeights() (Weights, error) {
+	m.Lock()
+	defer m.Unlock()
 	w, err := m.client.GetWeights()
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch weights from model: %w", err)
@@ -68,7 +90,6 @@ func NewModel(c *Config) (*Model, error) {
 	// Create a random socket path in /tmp
 	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("btml-model-%d.sock", time.Now().Unix()))
 
-	// Start the Python process
 	args := []string{
 		"main.py",
 		"--train-data", c.GetTrainDataPath(),

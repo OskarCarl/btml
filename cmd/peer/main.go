@@ -15,6 +15,7 @@ import (
 	"github.com/vs-ude/btml/internal/logging"
 	m "github.com/vs-ude/btml/internal/model"
 	"github.com/vs-ude/btml/internal/peer"
+	"github.com/vs-ude/btml/internal/play"
 )
 
 func main() {
@@ -96,10 +97,11 @@ func run(c *peer.Config) int {
 	}
 }
 
-	m.Train()
 func localPlay(m *m.Model, peer *peer.Me) {
+	p := play.NewPlay(peer, m)
+	p.AddStep(&play.Train{})
+	p.AddStep(&play.Eval{})
+	p.AddStep(&play.Wait{T: time.Second * 10})
 
-	w, _ := m.GetWeights()
 	peer.WaitReady()
-	peer.Send(w)
 }
