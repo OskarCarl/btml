@@ -3,6 +3,8 @@ package tracker
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/vs-ude/btml/internal/structs"
 )
 
 type Config struct {
@@ -13,10 +15,10 @@ type Config struct {
 		MaxReturnPeers   int           `toml:"max_return_peers"`
 	} `toml:"tracker"`
 	Peer struct {
-		MetricURL  string        `toml:"metric_url"`
 		Dataset    string        `toml:"dataset"`
 		UpdateFreq time.Duration `toml:"update_freq"`
 	} `toml:"peer"`
+	Metrics structs.Metrics `toml:"metrics"`
 }
 
 func (c *Config) String() string {
