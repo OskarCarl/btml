@@ -2,6 +2,7 @@ package tracker
 
 import (
 	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -26,7 +27,7 @@ type Tracker struct {
 func NewTracker(addr string, conf string) *Tracker {
 	c := &Config{}
 	if conf != "" {
-		log.Default().Printf("Reading config from %s", conf)
+		slog.Debug("Reading config", "path", conf)
 		_, err := toml.DecodeFile(conf, c)
 		if err != nil {
 			log.Fatal(err)
@@ -44,14 +45,14 @@ func NewTracker(addr string, conf string) *Tracker {
 }
 
 func (t *Tracker) Serve(done chan int) {
-	log.Default().Printf("Running with config: %s", t.conf)
+	slog.Info("Starting tracker", "config", t.conf.String())
 	t.peers = new(structs.Peerlist)
 	t.peers.List = make(map[string]*structs.Peer)
 	http.HandleFunc("/list", t.list)
 	http.HandleFunc("/join", t.join)
 	http.HandleFunc("/leave", t.leave)
 	http.HandleFunc("/whoami", t.initPeer)
-	log.Default().Printf("Tracker listening on http://%s", t.addr)
+	slog.Info("Tracker listening", "addr", "http://"+t.addr)
 	log.Default().Println(http.ListenAndServe(t.addr, nil))
 	done <- 1
 }

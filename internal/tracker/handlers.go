@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -25,13 +26,13 @@ func (t *Tracker) join(w http.ResponseWriter, r *http.Request) {
 	peer, err := getPeer(r)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Default().Println("Error:", err.Error())
+		slog.Warn("Failed to get peer from request", "error", err)
 		return
 	}
 	peer.LastSeen = time.Now()
 	t.newlist <- peer
 	w.WriteHeader(http.StatusOK)
-	log.Default().Printf("Added %s to the list of peers in the swarm\n", peer)
+	slog.Debug("Added peer to swarm", "peer", peer)
 }
 
 // leave removes a peer from the peerlist. It will actually be removed from the
@@ -45,7 +46,7 @@ func (t *Tracker) leave(w http.ResponseWriter, r *http.Request) {
 	}
 	t.removelist <- peer.Name
 	w.WriteHeader(http.StatusOK)
-	log.Default().Printf("Removed %s from the list of peers in the swarm\n", peer)
+	slog.Debug("Removed peer from swarm", "peer", peer)
 }
 
 // getPeer extracts the requesting peer from the request body.

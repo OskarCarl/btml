@@ -4,7 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"math/big"
 	"net"
 	"net/http"
@@ -18,7 +18,7 @@ func (t *Tracker) initPeer(w http.ResponseWriter, r *http.Request) {
 	i, err := t.getRandomUnusedPeerID()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Printf("Error getting random unused peer ID: %v", err)
+		slog.Warn("Failed to get random unused peer ID", "error", err)
 		return
 	}
 	host, _, _ := net.SplitHostPort(r.RemoteAddr)

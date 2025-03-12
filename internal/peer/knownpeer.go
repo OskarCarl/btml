@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"sync"
 
@@ -72,14 +72,14 @@ func (kp *KnownPeer) Send(data []byte, age int, wg *sync.WaitGroup, ctx context.
 	defer wg.Done()
 	conn, err := kp.getOrEstablishConnection(dial)
 	if err != nil {
-		log.Default().Printf("Failed to establish connection to %s: %v", kp.Name, err)
+		slog.Warn("Failed to establish connection", "peer", kp.Name, "error", err)
 		return
 	}
 
 	// Open a new stream for sending data
 	stream, err := conn.OpenStreamSync(ctx)
 	if err != nil {
-		log.Default().Printf("Failed to open stream to %s: %v", kp.Name, err)
+		slog.Warn("Failed to open stream", "peer", kp.Name, "error", err)
 		return
 	}
 	defer stream.Close()
@@ -89,15 +89,15 @@ func (kp *KnownPeer) Send(data []byte, age int, wg *sync.WaitGroup, ctx context.
 	binary.BigEndian.PutUint32(lenBuf, uint32(len(data)))
 	_, err = stream.Write(lenBuf)
 	if err != nil {
-		log.Default().Printf("Error writing message length to %s: %v", kp.Name, err)
+		slog.Warn("Failed writing message length", "peer", kp.Name, "error", err)
 		return
 	}
 
 	// Write the actual message
-	log.Default().Printf("Sending data to %s", kp.Name)
+	slog.Info("Sending data", "peer", kp.Name)
 	_, err = stream.Write(data)
 	if err != nil {
-		log.Default().Printf("Error sending data to %s: %v", kp.Name, err)
+		slog.Warn("Failed sending data", "peer", kp.Name, "error", err)
 	} else {
 		kp.LastUpdatedAge = age
 	}
@@ -108,7 +108,7 @@ func (kp *KnownPeer) getOrEstablishConnection(dial func(addr net.Addr) (quic.Con
 		kp.Lock()
 		defer kp.Unlock()
 
-		log.Default().Printf("Connecting to peer %s", kp.Name)
+		slog.Debug("Connecting to peer", "peer", kp.Name)
 		conn, err := dial(kp.Addr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to connect to %s: %v", kp.Addr.String(), err)

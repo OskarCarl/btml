@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-	"log"
+	"log/slog"
 	"net"
 	"sync"
 
@@ -21,7 +21,7 @@ func (me *Me) Listen() {
 
 	listener, err := me.server.Listen(me.tlsConfig, me.quicConfig)
 	if err != nil {
-		log.Default().Printf("Error listening: %v", err)
+		slog.Error("Listening failed", "error", err)
 		return
 	}
 
@@ -29,10 +29,10 @@ func (me *Me) Listen() {
 		conn, err := listener.Accept(me.Ctx)
 		if err != nil {
 			if me.Ctx.Err() != nil {
-				log.Default().Print("Stopping the listener")
+				slog.Info("Stopping the listener")
 				return
 			}
-			log.Default().Printf("Error accepting connection: %v", err)
+			slog.Warn("Failed accepting connection", "error", err)
 			continue
 		}
 
@@ -50,7 +50,7 @@ func (me *Me) handleConnection(conn quic.Connection) {
 	for {
 		stream, err := conn.AcceptStream(me.Ctx)
 		if err != nil {
-			log.Default().Printf("Error accepting stream: %v", err)
+			slog.Warn("Failed accepting stream", "error", err)
 			return
 		}
 
@@ -67,7 +67,7 @@ func (me *Me) handleStream(stream quic.Stream) {
 		_, err := io.ReadFull(stream, lenBuf)
 		if err != nil {
 			if !errors.Is(err, io.EOF) {
-				log.Default().Printf("Error reading message length: %v", err)
+				slog.Warn("Failed reading message length", "error", err)
 			}
 			return
 		}
@@ -78,7 +78,7 @@ func (me *Me) handleStream(stream quic.Stream) {
 		msgBuf := make([]byte, msgLen)
 		_, err = io.ReadFull(stream, msgBuf)
 		if err != nil {
-			log.Default().Printf("Error reading message body: %v", err)
+			slog.Warn("Failed reading message body", "error", err)
 			return
 		}
 
@@ -86,14 +86,13 @@ func (me *Me) handleStream(stream quic.Stream) {
 		update := &ModelUpdate{}
 		err = proto.Unmarshal(msgBuf, update)
 		if err != nil {
-			log.Default().Printf("Error unmarshaling model update: %v", err)
+			slog.Warn("Failed unmarshaling model update", "error", err)
 			continue
 		}
 
 		w := model.NewWeights(update.Weights)
 
-		log.Default().Printf("Received model update from %s, age: %d, weights size: %d",
-			update.Source, update.Age, len(update.Weights))
+		slog.Info("Received model update", "source", update.Source, "age", update.Age)
 		me.data.incomingChan <- w
 	}
 }
@@ -111,7 +110,7 @@ func (me *Me) Outgoing() {
 			me.data.outgoingStorage[data.GetAge()] = data
 			bytes, err := marshalUpdate(data, me.config.Name)
 			if err != nil {
-				log.Default().Printf("Error marshaling model update: %v", err)
+				slog.Warn("Failed marshaling model update", "error", err)
 				continue
 			}
 			for _, peer := range me.peerset.Active {

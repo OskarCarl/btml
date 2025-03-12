@@ -1,8 +1,8 @@
 package main
 
 import (
-	"flag"
 	"log"
+	"log/slog"
 	"os"
 
 	"github.com/vs-ude/btml/internal/logging"
@@ -10,10 +10,7 @@ import (
 )
 
 func main() {
-	flag.Parse()
-
-	logging.Logger.SetPrefix("[TEST-MODEL] ")
-	logging.Logger.Use()
+	logging.FromEnv()
 
 	c := &model.Config{
 		Name:          "42",
@@ -26,7 +23,7 @@ func main() {
 	// Create a new model instance
 	m, err := model.NewModel(c)
 	if err != nil {
-		log.Printf("Failed to create model: %v", err)
+		slog.Error("Failed to create model", "error", err)
 		os.Exit(1)
 	}
 	// Ensure cleanup on exit
@@ -34,26 +31,26 @@ func main() {
 
 	// Train the model
 	if err := m.Train(); err != nil {
-		log.Printf("Failed to train model: %v", err)
+		slog.Error("Failed to train model", "error", err)
 		os.Exit(1)
 	}
 
 	// Get initial weights
 	weights, err := m.GetWeights()
 	if err != nil {
-		log.Printf("Failed to get weights: %v", err)
+		slog.Error("Failed to get weights", "error", err)
 		os.Exit(1)
 	}
 
 	// Evaluate the model
 	if err := m.Eval(); err != nil {
-		log.Printf("Failed to evaluate model: %v", err)
+		slog.Error("Failed to evaluate model", "error", err)
 		os.Exit(1)
 	}
 
 	// Apply weights back
 	if err := m.Apply(weights); err != nil {
-		log.Printf("Failed to apply weights: %v", err)
+		slog.Error("Failed to apply weights", "error", err)
 		os.Exit(1)
 	}
 

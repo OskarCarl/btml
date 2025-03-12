@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -18,8 +18,7 @@ func main() {
 	flag.StringVar(&configPath, "config", "config.toml", "The path to the configuration file.")
 	flag.Parse()
 
-	logging.Logger.SetPrefix("[TRACKER]")
-	logging.Logger.Use()
+	logging.FromEnv()
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
@@ -31,7 +30,7 @@ func main() {
 
 	select {
 	case <-sig:
-		log.Default().Println("Tracker is terminating.")
+		slog.Info("Tracker is terminating")
 		os.Exit(0)
 	case exitCode := <-done:
 		os.Exit(exitCode)

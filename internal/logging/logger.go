@@ -1,42 +1,43 @@
 package logging
 
 import (
-	"log"
+	"log/slog"
 	"os"
-	"strconv"
-	"time"
 )
 
-var Logger *MonotonicLogWriter
+var Logger *slog.Logger
 
 func init() {
-	Logger = &MonotonicLogWriter{}
+	SetLevel(slog.LevelInfo)
 }
 
-type MonotonicLogWriter struct {
-	prefix,
-	buf []byte
-	prefixLen int
+func FromEnv() {
+	levelStr := os.Getenv("LOG_LEVEL")
+	var level slog.Level
+	switch levelStr {
+	case "debug", "DEBUG":
+		level = slog.LevelDebug
+	case "warn", "WARN":
+		level = slog.LevelWarn
+	case "error", "ERROR":
+		level = slog.LevelError
+	default:
+		level = slog.LevelInfo
+	}
+	SetLevel(level)
 }
 
-func (l *MonotonicLogWriter) Use() {
-	log.Default().SetOutput(Logger)
-	log.Default().SetFlags(0)
+func SetLevel(level slog.Level) {
+	opts := &slog.HandlerOptions{
+		Level: level,
+	}
+	handler := slog.NewTextHandler(os.Stdout, opts)
+	Logger = slog.New(handler)
+	slog.SetDefault(Logger)
 }
 
-func (l *MonotonicLogWriter) SetPrefix(prefix string) {
-	l.prefix = []byte(prefix)
-	l.prefixLen = len(l.prefix) + 1
-	l.buf = make([]byte, 0, 128)
-	l.buf = append(l.buf, l.prefix...)
-	l.buf = append(l.buf, 0x20)
-}
-
-func (l *MonotonicLogWriter) Write(p []byte) (int, error) {
-	t := strconv.FormatInt(time.Now().UnixMicro(), 10)
-	l.buf = l.buf[:l.prefixLen]
-	l.buf = append(l.buf, t...)
-	l.buf = append(l.buf, 0x20)
-	l.buf = append(l.buf, p...)
-	return os.Stdout.Write(l.buf)
+// SetID updates the Logger's prefix
+func SetID(id string) {
+	Logger = Logger.With("id", id)
+	slog.SetDefault(Logger)
 }

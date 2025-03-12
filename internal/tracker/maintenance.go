@@ -1,19 +1,20 @@
 package tracker
 
 import (
-	"log"
+	"log/slog"
 	"time"
 )
 
 func (t *Tracker) MaintenanceLoop() {
-	log.Default().Println("Starting maintenance loop")
+	slog.Debug("Starting maintenance loop")
 	for {
 		time.Sleep(t.conf.Tracker.MaintainInterval)
-		log.Default().Println("Running periodic maintenance")
+		slog.Debug("Running periodic maintenance")
 		t.processAddedPeers()
 		t.processTouches()
 		t.processRemovedPeers()
 		t.cleanPeers()
+		slog.Info("Current peer count", "count", len(t.peers.List))
 	}
 }
 
@@ -41,7 +42,7 @@ func (t *Tracker) processTouches() {
 func (t *Tracker) cleanPeers() {
 	for _, p := range t.peers.List {
 		if p.LastSeen.Before(time.Now().Add(-t.conf.Tracker.PeerTimeout)) {
-			log.Default().Printf("Removing %s from peerset due to inactivity", p)
+			slog.Debug("Removing inactive peer", "peer", p)
 			t.peers.Remove(p)
 		}
 	}

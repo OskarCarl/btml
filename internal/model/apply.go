@@ -1,6 +1,6 @@
 package model
 
-import "log"
+import "log/slog"
 
 type ApplyStrategy interface {
 	SetModel(model *Model)
@@ -24,7 +24,7 @@ func (ns *NaiveStrategy) Start(weightsChan <-chan *Weights) error {
 		for weights := range weightsChan {
 			err := ns.model.Apply(weights)
 			if err != nil {
-				log.Default().Printf("Error applying weights: %v", err)
+				slog.Error("Failed applying weights", "error", err)
 				continue
 			}
 		}

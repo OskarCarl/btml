@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"log"
+	"log/slog"
 	"net"
 	"sync"
 
@@ -58,18 +58,20 @@ func NewMe(config *Config) *Me {
 func (me *Me) Setup() {
 	addr, err := net.ResolveUDPAddr("udp", me.config.Addr+":0")
 	if err != nil {
-		log.Default().Panicf("Error resolving UDP address: %v\n", err)
+		slog.Error("Failed resolving UDP address", "error", err)
+		panic(err)
 	}
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		log.Default().Panicf("Error listening on UDP address: %v\n", err)
+		slog.Error("Failed listening on UDP address", "error", err)
+		panic(err)
 	}
 	listener := &quic.Transport{
 		Conn: conn,
 	}
 	me.server = listener
 	me.localAddr = conn.LocalAddr()
-	log.Default().Printf("QUIC listener started on %s", me.localAddr.String())
+	slog.Info("QUIC listener started", "addr", me.localAddr.String())
 }
 
 func (me *Me) Send(w *model.Weights) {

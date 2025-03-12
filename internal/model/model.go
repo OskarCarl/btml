@@ -2,7 +2,7 @@ package model
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"os"
 	"os/exec"
@@ -23,7 +23,7 @@ type Model struct {
 // Shutdown closes the model client and logs a message. It ignores the lock.
 func (m *Model) Shutdown() {
 	m.client.Close()
-	log.Default().Println("Model stopped")
+	slog.Info("Model stopped")
 }
 
 // Eval evaluates the model and logs the results. It blocks until other
@@ -35,7 +35,7 @@ func (m *Model) Eval() error {
 	if err != nil {
 		return fmt.Errorf("failed to evaluate model: %w", err)
 	}
-	log.Default().Printf("Evaluated model; acc: %f, loss: %f", met.acc, met.loss)
+	slog.Info("Evaluated model", "accuracy", met.acc, "loss", met.loss)
 	return nil
 }
 
@@ -49,7 +49,7 @@ func (m *Model) Train() error {
 		return fmt.Errorf("failed to train model: %w", err)
 	}
 	m.age++
-	log.Default().Printf("Trained model to age %d; loss: %f", m.age, met.loss)
+	slog.Info("Trained model", "age", m.age, "loss", met.loss)
 	m.executeCallback()
 	return nil
 }
@@ -67,7 +67,7 @@ func (m *Model) Apply(weights *Weights) error {
 	if err != nil {
 		return fmt.Errorf("failed to train model: %w", err)
 	}
-	log.Default().Printf("Applied weights to model, loss: %f", met.loss)
+	slog.Info("Applied weights to model", "loss", met.loss)
 	updateAge(m, weights)
 	m.executeCallback()
 	return nil
@@ -87,7 +87,7 @@ func (m *Model) getWeights() (*Weights, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch weights from model: %w", err)
 	}
-	log.Default().Print("Got weights from model")
+	slog.Debug("Got weights from model")
 	w.setAge(m.age)
 	return w, nil
 }
@@ -98,7 +98,7 @@ func (m *Model) executeCallback() {
 	if m.modelModifiedCallback != nil {
 		w, err := m.getWeights()
 		if err != nil {
-			log.Default().Printf("Failed to get weights for callback: %s", err)
+			slog.Error("Failed to get weights for callback", "error", err)
 			return
 		}
 		m.modelModifiedCallback(w)
@@ -121,7 +121,7 @@ func NewModel(c *Config) (*Model, error) {
 		if p, err := resolveLogPath(c); err == nil {
 			args = append(args, "--log-file", p)
 		} else {
-			log.Default().Printf("Log path should be either a nonexistent *.log file or a directory: %s", err)
+			slog.Warn("Invalid log path configuration. Log path should be either a nonexistent *.log file or a directory.", "error", err)
 		}
 	}
 	cmd := exec.Command(c.PythonRuntime, args...)
@@ -141,7 +141,7 @@ func (m *Model) SetCallback(callback func(*Weights)) {
 }
 
 func (m *Model) Start() error {
-	log.Default().Printf("Starting Python process: %s (cwd: %s)", m.client.cmd.String(), m.client.cmd.Dir)
+	slog.Info("Starting Python process", "command", m.client.cmd.String(), "cwd", m.client.cmd.Dir)
 	if err := m.client.cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start Python process: %w", err)
 	}
@@ -155,7 +155,7 @@ func (m *Model) Start() error {
 			break
 		}
 		if i < 4 && i > 1 {
-			log.Default().Printf("No response from model, retrying %d/5 ...", i+2)
+			slog.Debug("No response from model", "attempt", i+2, "max_attempts", 5)
 		}
 		time.Sleep(time.Second * 2)
 	}

@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"math/big"
 	"os"
 	"os/signal"
@@ -35,6 +36,8 @@ func main() {
 	flag.BoolVar(&autoconf, "autoconf", false, "Automatically configure this peer using the provided tracker.")
 	flag.Parse()
 
+	logging.FromEnv()
+
 	c := &peer.Config{
 		TrackerURL: trackerURL,
 		ModelConf: &model.Config{
@@ -45,10 +48,10 @@ func main() {
 		},
 	}
 	if autoconf {
-		fmt.Printf("> Using peer autoconfiguration with tracker %s <\n", trackerURL)
+		slog.Info("Using peer autoconfiguration", "tracker", trackerURL)
 		err := peer.Autoconf(c)
 		if err != nil {
-			fmt.Printf("Autoconfiguration failed: %v\n", err)
+			slog.Error("Autoconfiguration failed", "error", err)
 			os.Exit(1)
 		}
 	} else {
@@ -62,8 +65,7 @@ func main() {
 		c.ModelConf.Name = name
 	}
 
-	logging.Logger.SetPrefix("[PEER " + c.Name + "]")
-	logging.Logger.Use()
+	logging.SetID(c.Name)
 
 	os.Exit(run(c))
 }
@@ -103,7 +105,7 @@ func run(c *peer.Config) int {
 
 	select {
 	case <-sig:
-		log.Default().Println("Peer is terminating")
+		slog.Info("Peer is terminating")
 		return 0
 	case <-me.Ctx.Done():
 		return 2

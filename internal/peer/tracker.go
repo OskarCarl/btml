@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"sync"
 	"time"
@@ -27,7 +27,7 @@ func (t *Tracker) Setup(c *Config, p *structs.Peer) {
 
 	err := t.Join()
 	if err != nil {
-		log.Default().Printf("Error joining the tracker: %v\n", err)
+		slog.Error("Failed joining the tracker", "error", err)
 		return
 	}
 }
@@ -50,7 +50,7 @@ func (t *Tracker) Update() error {
 		return fmt.Errorf("unable to parse update response body data from tracker\n%w", err)
 	}
 	delete(t.Peers.List, t.Identity.Name)
-	log.Default().Printf("Found %d peers: %s\n", t.Peers.Len(), t.Peers.String())
+	slog.Info("Found peers", "count", t.Peers.Len(), "peers", t.Peers.String())
 	return nil
 }
 
@@ -97,10 +97,10 @@ func (t *Tracker) periodicUpdate(wg *sync.WaitGroup, ctx context.Context) {
 			t.Unlock()
 			if err != nil {
 				errCount++
-				log.Default().Printf("Error updating peers from the tracker: %v\n", err)
+				slog.Warn("Failed updating peers from tracker", "error", err)
 				if errCount >= 3 {
 					waitTime = min(waitTime*2, time.Second*120)
-					log.Default().Printf("Too many consecutive errors updating peers from the tracker, increasing wait time to %s\n", waitTime.String())
+					slog.Warn("Too many consecutive errors updating peers", "wait_time", waitTime.String(), "error_count", errCount)
 					timer.Reset(waitTime)
 				}
 			} else {

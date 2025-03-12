@@ -2,7 +2,7 @@ package play
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -51,7 +51,7 @@ func (w *Wait) Setup(in string) error {
 }
 
 func (w *Wait) Run(_ *peer.Me, _ *model.Model) error {
-	log.Default().Printf("Waiting %s", w.T)
+	slog.Debug("Waiting", "duration", w.T)
 	time.Sleep(w.T)
 	return nil
 }

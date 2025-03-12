@@ -5,12 +5,15 @@ import (
 	"os"
 	"time"
 
+	"github.com/vs-ude/btml/internal/logging"
 	"github.com/vs-ude/btml/internal/model"
 	"github.com/vs-ude/btml/internal/peer"
 	"github.com/vs-ude/btml/internal/play"
 )
 
 func main() {
+	logging.FromEnv()
+
 	mconf := &model.Config{
 		Name:          "42",
 		PythonRuntime: "venv/bin/python3",

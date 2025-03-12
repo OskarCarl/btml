@@ -1,7 +1,7 @@
 package peer
 
 import (
-	"log"
+	"log/slog"
 	"net"
 	"time"
 
@@ -45,5 +45,5 @@ func (me *Me) WaitReady() {
 	}
 	me.UpdatePeerset()
 	me.pss.Select(me)
-	log.Default().Printf("Ready with %d peers", len(me.peerset.Active))
+	slog.Info("Starting local play")
 }
