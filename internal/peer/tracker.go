@@ -18,6 +18,7 @@ type Tracker struct {
 	Peers      *structs.Peerlist
 	Identity   *structs.Peer
 	UpdateFreq time.Duration
+	sync.Mutex
 }
 
 func (t *Tracker) Setup(c *Config, p *structs.Peer) {
@@ -91,7 +92,9 @@ func (t *Tracker) periodicUpdate(wg *sync.WaitGroup, ctx context.Context) {
 	for {
 		select {
 		case <-timer.C:
+			t.Lock()
 			err := t.Update()
+			t.Unlock()
 			if err != nil {
 				errCount++
 				log.Default().Printf("Error updating peers from the tracker: %v\n", err)

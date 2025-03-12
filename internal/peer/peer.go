@@ -43,6 +43,7 @@ func (me *Me) WaitReady() {
 	for len(me.tracker.Peers.List) < 1 {
 		time.Sleep(time.Second * 2)
 	}
+	me.UpdatePeerset()
 	me.pss.Select(me)
 	log.Default().Printf("Ready with %d peers", len(me.peerset.Active))
 }

@@ -6,37 +6,9 @@ import (
 	"slices"
 
 	"github.com/vs-ude/btml/internal/structs"
-	"github.com/vs-ude/btml/internal/trust"
 )
 
 type ErrPeerInactive error
-
-type peerStatus int
-
-const (
-	ERR peerStatus = iota
-	UNCHOKED
-	CHOKED
-	UNKNOWN
-)
-
-type KnownPeer struct {
-	S                trust.Score
-	MostRecentUpdate int
-	P                *structs.Peer
-	State            peerStatus
-	// TODO move QUIC conn here and kill it when choking?
-}
-
-func (kp *KnownPeer) unchoke() error {
-	kp.State = UNCHOKED
-	return nil
-}
-
-func (kp *KnownPeer) choke() error {
-	kp.State = CHOKED
-	return nil
-}
 
 type PeerSet struct {
 	Active  map[string]*KnownPeer // subset of Known
@@ -57,17 +29,12 @@ func (ps *PeerSet) Add(p *structs.Peer) error {
 	case err != nil:
 		return err
 	case status == CHOKED:
-		ps.Known[p.Name].P = p.Copy()
+		ps.Known[p.Name].Update(p)
 		return fmt.Errorf("peer is known and choked")
 	case status == UNCHOKED:
-		ps.Known[p.Name].P = p.Copy()
+		ps.Known[p.Name].Update(p)
 	case status == UNKNOWN:
-		ps.Known[p.Name] = &KnownPeer{
-			S:                0,
-			MostRecentUpdate: 0,
-			P:                p.Copy(),
-			State:            CHOKED,
-		}
+		ps.Known[p.Name] = NewKnownPeer(p)
 	}
 	return nil
 }
@@ -126,7 +93,7 @@ func (ps *PeerSet) GetBestChoked(n int) []string {
 func (ps *PeerSet) CheckPeer(new *structs.Peer) (peerStatus, error) {
 	if _, ok := ps.Active[new.Name]; ok {
 		// TODO: properly verify the fingerprint
-		if ps.Known[new.Name].P.Fingerprint == new.Fingerprint {
+		if ps.Known[new.Name].Fingerprint == new.Fingerprint {
 			return UNCHOKED, nil
 		} else {
 			return ERR, fmt.Errorf("unchoked peer exists and the new one has a non-matching fingerprint")
@@ -134,7 +101,7 @@ func (ps *PeerSet) CheckPeer(new *structs.Peer) (peerStatus, error) {
 	}
 	if p, ok := ps.Known[new.Name]; ok {
 		// TODO: properly verify the fingerprint and check the score
-		if p.P.Fingerprint == new.Fingerprint {
+		if p.Fingerprint == new.Fingerprint {
 			return CHOKED, nil
 		} else {
 			return ERR, fmt.Errorf("choked peer exists and the new one has a non-matching fingerprint")

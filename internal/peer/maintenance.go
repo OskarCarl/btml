@@ -17,9 +17,18 @@ func (me *Me) MaintenanceLoop() {
 		case <-me.Ctx.Done():
 			return
 		case <-timer.C:
+			me.UpdatePeerset()
 			me.pss.Select(me)
 			timer.Reset(wait)
 		}
+	}
+}
+
+func (me *Me) UpdatePeerset() {
+	me.tracker.Lock()
+	defer me.tracker.Unlock()
+	for _, p := range me.tracker.Peers.List {
+		me.peerset.Add(p)
 	}
 }
 

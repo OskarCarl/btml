@@ -110,18 +110,30 @@ func run(c *peer.Config) int {
 	}
 }
 
+func randTime() time.Duration {
+	randInt, err := rand.Int(rand.Reader, big.NewInt(30))
+	if err != nil {
+		panic(err)
+	}
+	return time.Duration(randInt.Int64()) * time.Second
+}
+
 func localPlay(m *model.Model, peer *peer.Me) {
 	log.Default().Printf("Starting local play")
 	p := play.NewPlay(peer, m)
 	p.AddStep(&play.Train{})
+	p.AddStep(&play.Train{})
 	p.AddStep(&play.Eval{})
-	p.AddStep(&play.Wait{T: time.Second * 10})
+	p.AddStep(&play.Wait{T: randTime()})
 	p.AddStep(&play.Train{})
-	p.AddStep(&play.Wait{T: time.Second * 5})
+	p.AddStep(&play.Wait{T: randTime()})
 	p.AddStep(&play.Train{})
-	p.AddStep(&play.Wait{T: time.Second * 4})
+	p.AddStep(&play.Eval{})
+	p.AddStep(&play.Wait{T: randTime()})
 	p.AddStep(&play.Train{})
-	p.AddStep(&play.Wait{T: time.Second * 3})
+	p.AddStep(&play.Wait{T: randTime()})
+	p.AddStep(&play.Train{})
+	p.AddStep(&play.Eval{})
 
 	peer.WaitReady()
 	p.Run()

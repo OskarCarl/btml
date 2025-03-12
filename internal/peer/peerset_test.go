@@ -33,7 +33,7 @@ func buildPeerSet() *peer.PeerSet {
 	buildPeer := func(s int, n string) *peer.KnownPeer {
 		return &peer.KnownPeer{
 			S: trust.Score(s),
-			P: &structs.Peer{
+			Peer: structs.Peer{
 				Name: n,
 			},
 		}
