@@ -88,15 +88,15 @@ func run(c *peer.Config) int {
 	defer me.Shutdown()
 
 	strategy := model.NewNaiveStrategy(m)
-
 	ch, _ := me.ListenForWeights()
 	strategy.Start(ch)
+
 	m.SetCallback(func(weights *model.Weights) {
 		i, _ := rand.Int(rand.Reader, big.NewInt(100))
-		if i.Cmp(big.NewInt(50)) < 0 {
+		if i.Cmp(big.NewInt(80)) < 0 {
 			return
 		}
-		me.DistributeWeights(weights)
+		me.Send(weights)
 	})
 
 	go localPlay(m, me)

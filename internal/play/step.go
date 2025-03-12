@@ -23,7 +23,7 @@ func (t *Train) Setup(_ string) error {
 }
 
 func (t *Train) Run(_ *peer.Me, mod *model.Model) error {
-	log.Default().Println("Training model")
+	// log.Default().Println("Training model")
 	mod.Train()
 	return nil
 }
@@ -36,7 +36,7 @@ func (t *Eval) Setup(_ string) error {
 }
 
 func (t *Eval) Run(_ *peer.Me, mod *model.Model) error {
-	log.Default().Println("Evaluating model")
+	// log.Default().Println("Evaluating model")
 	mod.Eval()
 	return nil
 }

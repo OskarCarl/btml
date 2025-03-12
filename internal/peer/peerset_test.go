@@ -39,12 +39,13 @@ func buildPeerSet() *peer.PeerSet {
 		}
 	}
 
-	ps := peer.NewPeerSet()
+	ps := peer.NewPeerSet(8)
 
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		n := strconv.Itoa(i)
-		ps.Active["peer"+n] = buildPeer(10-i, n) // Score and name are sorted inversely!
-		ps.Choked["peer"+n] = buildPeer(10-i, n)   // Score and name are sorted inversely!
+		p := buildPeer(10-i, n)
+		ps.Active["peer"+n] = p // Score and name are sorted inversely!
+		ps.Known["peer"+n] = p  // Score and name are sorted inversely!
 	}
 
 	return ps

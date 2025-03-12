@@ -19,11 +19,12 @@ import (
 )
 
 type Config struct {
-	Name       string
-	TrackerURL string
-	UpdateFreq time.Duration
-	ModelConf  *model.Config
-	Addr       string
+	Name        string
+	TrackerURL  string
+	UpdateFreq  time.Duration
+	ModelConf   *model.Config
+	Addr        string
+	PeersetSize int
 }
 
 func Autoconf(c *Config) error {
@@ -47,6 +48,7 @@ func Autoconf(c *Config) error {
 	c.UpdateFreq = whoami.UpdateFreq
 	c.ModelConf.Dataset = whoami.Dataset
 	c.ModelConf.Name = c.Name
+	c.PeersetSize = 5 // TODO make configurable
 
 	return nil
 }

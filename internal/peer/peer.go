@@ -24,12 +24,12 @@ func Start(c *Config, m *model.Model) *Me {
 	}
 	me.tracker.Setup(c, self)
 
-	me.peerset = NewPeerSet()
+	me.peerset = NewPeerSet(c.PeersetSize)
 	me.Wg.Add(1)
 	go me.Listen()
 
 	me.Wg.Add(1)
-	go me.tracker.periodicUpdate(&me.Wg, me.Ctx)
+	go me.MaintenanceLoop()
 
 	me.Wg.Add(1)
 	go me.Outgoing()
@@ -43,13 +43,6 @@ func (me *Me) WaitReady() {
 	for len(me.tracker.Peers.List) < 1 {
 		time.Sleep(time.Second * 2)
 	}
-	num := 0
-	for _, p := range me.tracker.Peers.List {
-		if num > 4 {
-			break
-		}
-		me.peerset.Add(p)
-		num++
-	}
-	log.Default().Printf("Ready with %d peers", num)
+	me.pss.Select(me)
+	log.Default().Printf("Ready with %d peers", len(me.peerset.Active))
 }

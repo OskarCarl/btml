@@ -1,10 +1,9 @@
 package peer
 
 import (
+	"errors"
 	"fmt"
 	"slices"
-
-	"maps"
 
 	"github.com/vs-ude/btml/internal/structs"
 	"github.com/vs-ude/btml/internal/trust"
@@ -25,17 +24,31 @@ type KnownPeer struct {
 	S                trust.Score
 	MostRecentUpdate int
 	P                *structs.Peer
+	State            peerStatus
+	// TODO move QUIC conn here and kill it when choking?
+}
+
+func (kp *KnownPeer) unchoke() error {
+	kp.State = UNCHOKED
+	return nil
+}
+
+func (kp *KnownPeer) choke() error {
+	kp.State = CHOKED
+	return nil
 }
 
 type PeerSet struct {
-	Active,
-	Choked map[string]*KnownPeer
+	Active  map[string]*KnownPeer // subset of Known
+	Known   map[string]*KnownPeer
+	MaxSize int
 }
 
-func NewPeerSet() *PeerSet {
+func NewPeerSet(size int) *PeerSet {
 	return &PeerSet{
-		Active: make(map[string]*KnownPeer),
-		Choked: make(map[string]*KnownPeer),
+		Active:  make(map[string]*KnownPeer, size),
+		Known:   make(map[string]*KnownPeer),
+		MaxSize: size,
 	}
 }
 
@@ -44,31 +57,39 @@ func (ps *PeerSet) Add(p *structs.Peer) error {
 	case err != nil:
 		return err
 	case status == CHOKED:
+		ps.Known[p.Name].P = p.Copy()
 		return fmt.Errorf("peer is known and choked")
-	case status == UNCHOKED || status == UNKNOWN:
-		ps.Active[p.Name] = &KnownPeer{S: 0, P: p.Copy()}
+	case status == UNCHOKED:
+		ps.Known[p.Name].P = p.Copy()
+	case status == UNKNOWN:
+		ps.Known[p.Name] = &KnownPeer{
+			S:                0,
+			MostRecentUpdate: 0,
+			P:                p.Copy(),
+			State:            CHOKED,
+		}
 	}
 	return nil
 }
 
 // MultiChoke chokes the n worst-scoring peers.
 // Overwrites peers in the Choked set if necessary.
-func (ps *PeerSet) MultiChoke(n int) {
-	if n > len(ps.Active) {
-		maps.Copy(ps.Choked, ps.Active)
-		clear(ps.Active)
-	}
+// func (ps *PeerSet) MultiChoke(n int) {
+// 	if n > len(ps.Active) {
+// 		maps.Copy(ps.Choked, ps.Active)
+// 		clear(ps.Active)
+// 	}
 
-	lowest := ps.GetWorstUnchoked(n)
-	for _, p := range lowest {
-		ps.Choke(p)
-	}
-}
+// 	lowest := ps.GetWorstUnchoked(n)
+// 	for _, p := range lowest {
+// 		ps.Choke(p)
+// 	}
+// }
 
 // Choke adds the given peer to the choke set and removes it from the active
 // set.
 func (ps *PeerSet) Choke(p string) {
-	ps.Choked[p] = ps.Active[p]
+	ps.Known[p].choke()
 	delete(ps.Active, p)
 }
 
@@ -83,9 +104,17 @@ func (ps *PeerSet) GetWorstUnchoked(n int) []string {
 	return keys[:n]
 }
 
-func (ps *PeerSet) Unchoke(p string) {
-	ps.Active[p] = ps.Choked[p]
-	delete(ps.Choked, p)
+func (ps *PeerSet) Unchoke(p string) error {
+	if _, ok := ps.Active[p]; ok {
+		return nil
+	}
+	if len(ps.Active) == ps.MaxSize {
+		return errors.New("max amount of unchoked peers reached")
+	}
+	ps.Active[p] = ps.Known[p]
+	ps.Active[p].unchoke()
+
+	return nil
 }
 
 func (ps *PeerSet) GetBestChoked(n int) []string {
@@ -95,15 +124,15 @@ func (ps *PeerSet) GetBestChoked(n int) []string {
 
 // CheckPeer verifies whether the given peer is new or if it is a legitimate replacement for a known one.
 func (ps *PeerSet) CheckPeer(new *structs.Peer) (peerStatus, error) {
-	if p, ok := ps.Active[new.Name]; ok {
+	if _, ok := ps.Active[new.Name]; ok {
 		// TODO: properly verify the fingerprint
-		if p.P.Fingerprint == new.Fingerprint {
+		if ps.Known[new.Name].P.Fingerprint == new.Fingerprint {
 			return UNCHOKED, nil
 		} else {
 			return ERR, fmt.Errorf("unchoked peer exists and the new one has a non-matching fingerprint")
 		}
 	}
-	if p, ok := ps.Choked[new.Name]; ok {
+	if p, ok := ps.Known[new.Name]; ok {
 		// TODO: properly verify the fingerprint and check the score
 		if p.P.Fingerprint == new.Fingerprint {
 			return CHOKED, nil

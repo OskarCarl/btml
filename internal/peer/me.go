@@ -31,6 +31,7 @@ type Me struct {
 	tlsConfig  *tls.Config
 	tracker    *Tracker
 	peerset    *PeerSet
+	pss        PeerSelectionStrategy
 	conns      sync.Map // map[string]quic.Connection
 	data       storage
 }
@@ -42,6 +43,7 @@ func NewMe(config *Config) *Me {
 		Ctx:        ctx,
 		cancel:     cancel,
 		config:     config,
+		pss:        &RandomPeerSelectionStrategy{},
 		quicConfig: generateQUICConfig(),
 		conns:      sync.Map{},
 		tlsConfig:  generateTLSConfig(),
@@ -82,10 +84,6 @@ func (me *Me) ListenForWeights() (<-chan *model.Weights, error) {
 		return nil, errors.New("someone is already listening for incoming weights")
 	}
 	return me.data.incomingChan, nil
-}
-
-func (me *Me) DistributeWeights(w *model.Weights) {
-	me.data.outgoingChan <- w
 }
 
 func (me *Me) Shutdown() {

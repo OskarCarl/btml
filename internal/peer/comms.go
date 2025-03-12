@@ -122,13 +122,11 @@ func (me *Me) Outgoing() {
 
 func (me *Me) sendPeer(data *model.Weights, peer *KnownPeer, name string, wg *sync.WaitGroup) {
 	defer wg.Done()
-	log.Default().Printf("Connecting to peer %s", name)
 	conn, err := me.getOrEstablishConnection(peer)
 	if err != nil {
 		log.Default().Printf("Failed to establish connection to %s: %v", name, err)
 		return
 	}
-	log.Default().Printf("Connected to peer %s at %s", name, peer.P.Addr.String())
 
 	// Open a new stream for sending data
 	stream, err := conn.OpenStreamSync(me.Ctx)
@@ -173,9 +171,11 @@ func (me *Me) sendPeer(data *model.Weights, peer *KnownPeer, name string, wg *sy
 func (me *Me) getOrEstablishConnection(peer *KnownPeer) (quic.Connection, error) {
 	connI, ok := me.conns.Load(peer.P.Addr.String())
 	if !ok {
+		log.Default().Printf("Connecting to peer %s", peer.P.Name)
 		me.conns.Store(peer.P.Addr.String(), nil)
 		conn, err := me.dialPeer(peer.P.Addr)
 		if err != nil {
+			me.conns.Delete(peer.P.Addr.String())
 			return nil, fmt.Errorf("failed to connect to %s: %v", peer.P.Addr.String(), err)
 		}
 		me.conns.Store(peer.P.Addr.String(), conn)

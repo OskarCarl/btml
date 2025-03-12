@@ -85,8 +85,9 @@ func getResponseBody(resp *http.Response) (*[]byte, error) {
 // This has the side effect of pinging the tracker so it knows we are alive.
 func (t *Tracker) periodicUpdate(wg *sync.WaitGroup, ctx context.Context) {
 	defer wg.Done()
-	timer := time.NewTimer(time.Second * 3)
+	timer := time.NewTimer(time.Second)
 	errCount := 0
+	waitTime := t.UpdateFreq
 	for {
 		select {
 		case <-timer.C:
@@ -95,13 +96,15 @@ func (t *Tracker) periodicUpdate(wg *sync.WaitGroup, ctx context.Context) {
 				errCount++
 				log.Default().Printf("Error updating peers from the tracker: %v\n", err)
 				if errCount >= 3 {
-					log.Default().Printf("Too many consecutive errors updating peers from the tracker, stopping periodic updates\n")
-					return
+					waitTime = min(waitTime*2, time.Second*120)
+					log.Default().Printf("Too many consecutive errors updating peers from the tracker, increasing wait time to %s\n", waitTime.String())
+					timer.Reset(waitTime)
 				}
 			} else {
 				errCount = 0
+				waitTime = t.UpdateFreq
 			}
-			timer.Reset(t.UpdateFreq)
+			timer.Reset(waitTime)
 		case <-ctx.Done():
 			return
 		}
