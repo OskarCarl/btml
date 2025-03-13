@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"flag"
 	"fmt"
-	"log"
 	"log/slog"
 	"math/big"
 	"os"
@@ -121,7 +120,7 @@ func randTime() time.Duration {
 }
 
 func localPlay(m *model.Model, peer *peer.Me) {
-	log.Default().Printf("Starting local play")
+	slog.Info("Starting local play")
 	p := play.NewPlay(peer, m)
 	p.AddStep(&play.Train{})
 	p.AddStep(&play.Train{})

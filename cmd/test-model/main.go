@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"log/slog"
 	"os"
 
@@ -56,7 +55,7 @@ func main() {
 
 	// Evaluate the model
 	if err := m.Eval(); err != nil {
-		log.Printf("Failed to evaluate model: %v", err)
+		slog.Error("Failed to evaluate model", "error", err)
 		os.Exit(1)
 	}
 }

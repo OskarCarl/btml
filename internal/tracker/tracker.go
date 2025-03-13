@@ -1,7 +1,6 @@
 package tracker
 
 import (
-	"log"
 	"log/slog"
 	"net/http"
 	"time"
@@ -30,7 +29,8 @@ func NewTracker(addr string, conf string) *Tracker {
 		slog.Debug("Reading config", "path", conf)
 		_, err := toml.DecodeFile(conf, c)
 		if err != nil {
-			log.Fatal(err)
+			slog.Error("Failed to read config", "error", err)
+			panic(err)
 		}
 	}
 	// We assume that no more than 1000 peers will join/leave between two maintenance cycles
@@ -53,6 +53,6 @@ func (t *Tracker) Serve(done chan int) {
 	http.HandleFunc("/leave", t.leave)
 	http.HandleFunc("/whoami", t.initPeer)
 	slog.Info("Tracker listening", "addr", "http://"+t.addr)
-	log.Default().Println(http.ListenAndServe(t.addr, nil))
+	slog.Error("HTTP server terminated", "error", http.ListenAndServe(t.addr, nil))
 	done <- 1
 }

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
 	"time"
@@ -41,7 +40,7 @@ func (t *Tracker) leave(w http.ResponseWriter, r *http.Request) {
 	peer, err := getPeer(r)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Default().Println("Error:", err.Error())
+		slog.Warn("Failed to get peer from request", "error", err)
 		return
 	}
 	t.removelist <- peer.Name
