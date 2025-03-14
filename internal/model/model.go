@@ -77,10 +77,10 @@ func (m *Model) Apply(weights *Weights) error {
 		return fmt.Errorf("failed to train model: %w", err)
 	}
 	slog.Info("Applied weights to model", "loss", met.loss)
+	m.age = max(m.age, weights.GetAge()) + 1
 	if m.telemetry != nil {
 		go m.telemetry.RecordWeightApplication(m.age, weights.GetAge(), met.loss)
 	}
-	updateAge(m, weights)
 	m.executeCallback()
 	return nil
 }
@@ -100,7 +100,7 @@ func (m *Model) getWeights() (*Weights, error) {
 		return nil, fmt.Errorf("failed to fetch weights from model: %w", err)
 	}
 	slog.Debug("Got weights from model")
-	w.setAge(m.age)
+	w.SetAge(m.age)
 	return w, nil
 }
 
@@ -200,10 +200,4 @@ func resolveLogPath(c *Config) (string, error) {
 func getRatio(m *Model, weights *Weights) float32 {
 	ratio := float32(m.age) / (float32(m.age) + float32(weights.GetAge()))
 	return ratio
-}
-
-// updateAge updates the model's age to the maximum of the current and the weights age.
-func updateAge(m *Model, weights *Weights) {
-	tmp := max(m.age, weights.GetAge())
-	m.age = tmp
 }

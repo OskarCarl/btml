@@ -106,7 +106,7 @@ func (c *ModelClient) GetWeights() (*Weights, error) {
 	if err != nil {
 		return nil, fmt.Errorf("export weights request failed: %w", err)
 	}
-	return NewWeights(res.Weights), nil
+	return NewWeights(res.Weights, -1), nil
 }
 
 func (c *ModelClient) sendRequest(req *ModelRequest) error {

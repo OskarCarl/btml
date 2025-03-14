@@ -90,7 +90,7 @@ func (me *Me) handleStream(stream quic.Stream) {
 			continue
 		}
 
-		w := model.NewWeights(update.Weights)
+		w := model.NewWeights(update.Weights, int(update.Age))
 
 		slog.Info("Received model update", "source", update.Source, "age", update.Age)
 		me.data.incomingChan <- w
