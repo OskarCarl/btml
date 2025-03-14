@@ -7,6 +7,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/vs-ude/btml/internal/structs"
+	"github.com/vs-ude/btml/internal/telemetry"
 )
 
 type touch struct {
@@ -15,9 +16,13 @@ type touch struct {
 }
 
 type Tracker struct {
-	addr       string
-	peers      *structs.Peerlist
-	conf       *Config
+	addr      string
+	peers     *structs.Peerlist
+	conf      *Config
+	telemetry struct {
+		enabled bool
+		ready   bool
+	}
 	newlist    chan *structs.Peer
 	removelist chan string
 	touchlist  chan touch
@@ -35,13 +40,34 @@ func NewTracker(addr string, conf string) *Tracker {
 	}
 	// We assume that no more than 1000 peers will join/leave between two maintenance cycles
 	t := &Tracker{
-		addr:       addr,
-		conf:       c,
+		addr: addr,
+		conf: c,
+		telemetry: struct {
+			enabled bool
+			ready   bool
+		}{
+			enabled: false,
+			ready:   false,
+		},
 		newlist:    make(chan *structs.Peer, 1000),
 		removelist: make(chan string, 1000),
 		touchlist:  make(chan touch, 10000),
 	}
 	return t
+}
+
+func (t *Tracker) EnableTelemetry() {
+	t.telemetry.enabled = true
+}
+
+func (t *Tracker) SetupTelemetry() {
+	err := telemetry.InitConf(t.conf.TelConf)
+	if err != nil {
+		slog.Warn("Failed to set up telemetry", "error", err)
+		t.conf.TelConf = nil
+		t.telemetry.enabled = false
+	}
+	t.telemetry.ready = true
 }
 
 func (t *Tracker) Serve(done chan int) {

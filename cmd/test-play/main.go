@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
@@ -22,9 +23,9 @@ func main() {
 		LogPath:       "",
 		Dataset:       "fMNIST",
 	}
-	mod, err := model.NewModel(mconf)
+	mod, err := model.NewModel(mconf, nil)
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Failed to create model", "error", err)
 		os.Exit(1)
 	}
 	me := peer.NewMe(&peer.Config{})
@@ -34,20 +35,20 @@ func main() {
 	p.AddStep(&play.Wait{T: time.Second * 10})
 	out, err := p.MarshalJSON()
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Failed to marshal play", "error", err)
 		os.Exit(2)
 	}
 	fmt.Println(string(out))
 
 	err = mod.Start()
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Failed to start model", "error", err)
 		os.Exit(3)
 	}
 
 	err = p.Run()
 	if err != nil {
-		fmt.Println(err)
+		slog.Error("Failed to run play", "error", err)
 		os.Exit(4)
 	}
 }

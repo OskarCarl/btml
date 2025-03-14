@@ -7,7 +7,9 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -25,12 +27,26 @@ type Config struct {
 	ModelConf   *model.Config
 	Addr        string
 	PeersetSize int
+	TelConf     *structs.TelemetryConf
 }
 
 func Autoconf(c *Config) error {
-	resp, err := http.Get(c.TrackerURL + "/whoami")
-	if err != nil {
-		return err
+	var resp *http.Response
+	var err error
+	code := http.StatusServiceUnavailable
+	for code == http.StatusServiceUnavailable {
+		resp, err = http.Get(c.TrackerURL + "/whoami")
+		if err != nil {
+			return err
+		}
+		code = resp.StatusCode
+		if code == http.StatusOK {
+			break
+		} else if code != http.StatusServiceUnavailable {
+			return errors.New("unable to connect to tracker for autoconfiguration")
+		}
+		slog.Info("Waiting for tracker to be ready")
+		time.Sleep(time.Second * 5)
 	}
 	defer resp.Body.Close()
 	body, err := getResponseBody(resp)
@@ -49,6 +65,7 @@ func Autoconf(c *Config) error {
 	c.ModelConf.Dataset = whoami.Dataset
 	c.ModelConf.Name = c.Name
 	c.PeersetSize = 5 // TODO make configurable
+	c.TelConf = &whoami.Telemetry
 
 	return nil
 }

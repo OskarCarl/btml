@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/vs-ude/btml/internal/telemetry"
 )
 
 // Model represents a model instance. All actions are executed in series.
@@ -17,6 +19,7 @@ type Model struct {
 	client                *ModelClient
 	age                   int
 	modelModifiedCallback func(*Weights)
+	telemetry             *telemetry.Client
 	sync.Mutex
 }
 
@@ -36,6 +39,9 @@ func (m *Model) Eval() error {
 		return fmt.Errorf("failed to evaluate model: %w", err)
 	}
 	slog.Info("Evaluated model", "accuracy", met.acc, "loss", met.loss)
+	if m.telemetry != nil {
+		go m.telemetry.RecordEvaluation(met.acc, met.loss)
+	}
 	return nil
 }
 
@@ -50,6 +56,9 @@ func (m *Model) Train() error {
 	}
 	m.age++
 	slog.Info("Trained model", "age", m.age, "loss", met.loss)
+	if m.telemetry != nil {
+		go m.telemetry.RecordTraining(met.loss, m.age)
+	}
 	m.executeCallback()
 	return nil
 }
@@ -68,6 +77,9 @@ func (m *Model) Apply(weights *Weights) error {
 		return fmt.Errorf("failed to train model: %w", err)
 	}
 	slog.Info("Applied weights to model", "loss", met.loss)
+	if m.telemetry != nil {
+		go m.telemetry.RecordWeightApplication(m.age, weights.GetAge(), met.loss)
+	}
 	updateAge(m, weights)
 	m.executeCallback()
 	return nil
@@ -107,7 +119,7 @@ func (m *Model) executeCallback() {
 
 // NewModel creates a new Model instance by starting the Python process
 // and establishing a connection to it
-func NewModel(c *Config) (*Model, error) {
+func NewModel(c *Config, telemetry *telemetry.Client) (*Model, error) {
 	// Create a random socket path in /tmp
 	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("btml-model-%d.sock", time.Now().Unix()))
 
@@ -133,6 +145,7 @@ func NewModel(c *Config) (*Model, error) {
 		},
 		age:                   1,
 		modelModifiedCallback: nil,
+		telemetry:             telemetry,
 	}, nil
 }
 

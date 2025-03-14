@@ -18,7 +18,7 @@ type Config struct {
 		Dataset    string        `toml:"dataset"`
 		UpdateFreq time.Duration `toml:"update_freq"`
 	} `toml:"peer"`
-	Metrics structs.Metrics `toml:"metrics"`
+	TelConf *structs.TelemetryConf `toml:"telemetry"`
 }
 
 func (c *Config) String() string {

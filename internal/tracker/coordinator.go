@@ -15,6 +15,10 @@ import (
 
 // initPeer gives a requesting peer all information it needs to initialize itself correctly to join the swarm
 func (t *Tracker) initPeer(w http.ResponseWriter, r *http.Request) {
+	if t.telemetry.enabled && !t.telemetry.ready {
+		http.Error(w, "telemetry not ready", http.StatusServiceUnavailable)
+		return
+	}
 	i, err := t.getRandomUnusedPeerID()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -27,6 +31,7 @@ func (t *Tracker) initPeer(w http.ResponseWriter, r *http.Request) {
 		Dataset:    t.conf.Peer.Dataset,
 		UpdateFreq: t.conf.Peer.UpdateFreq,
 		ExtIp:      host,
+		Telemetry:  *t.conf.TelConf,
 	}
 	buf, _ := json.Marshal(who)
 	w.Write(buf)

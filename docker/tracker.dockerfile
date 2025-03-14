@@ -17,4 +17,4 @@ COPY --from=builder /tracker /app/tracker
 EXPOSE 8080
 VOLUME [ "/config" ]
 COPY config/tracker/config.toml /config/config.toml
-CMD [ "/app/tracker", "-config", "/config/config.toml", "-listen", ":8080"]
+CMD [ "/app/tracker", "-config", "/config/config.toml", "-listen", ":8080", "-telemetry"]

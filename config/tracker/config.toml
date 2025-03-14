@@ -8,7 +8,8 @@ max_return_peers = 10
 dataset = "fMNIST"
 update_freq = "30s"
 
-[metrics]
+[telemetry]
 url = "http://influx:8086"
-db = "btml"
-token = "my-super-secret-user-token"
+org = "default"
+bucket = "btml"
+token = "my-super-secret-admin-token"

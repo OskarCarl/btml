@@ -14,8 +14,10 @@ import (
 func main() {
 	var listenAddr string
 	var configPath string
+	var telemetry bool
 	flag.StringVar(&listenAddr, "listen", ":8080", "The address the tracker listens on.")
 	flag.StringVar(&configPath, "config", "config.toml", "The path to the configuration file.")
+	flag.BoolVar(&telemetry, "telemetry", false, "Enable telemetry reporting for the swarm.")
 	flag.Parse()
 
 	logging.FromEnv()
@@ -25,6 +27,10 @@ func main() {
 
 	done := make(chan int, 1)
 	t := tracker.NewTracker(listenAddr, configPath)
+	if telemetry {
+		t.EnableTelemetry()
+		go t.SetupTelemetry()
+	}
 	go t.Serve(done)
 	go t.MaintenanceLoop()
 

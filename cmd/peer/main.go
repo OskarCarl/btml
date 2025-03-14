@@ -16,6 +16,7 @@ import (
 	"github.com/vs-ude/btml/internal/model"
 	"github.com/vs-ude/btml/internal/peer"
 	"github.com/vs-ude/btml/internal/play"
+	"github.com/vs-ude/btml/internal/telemetry"
 )
 
 func main() {
@@ -36,6 +37,7 @@ func main() {
 	flag.Parse()
 
 	logging.FromEnv()
+	var err error
 
 	c := &peer.Config{
 		TrackerURL: trackerURL,
@@ -48,7 +50,7 @@ func main() {
 	}
 	if autoconf {
 		slog.Info("Using peer autoconfiguration", "tracker", trackerURL)
-		err := peer.Autoconf(c)
+		err = peer.Autoconf(c)
 		if err != nil {
 			slog.Error("Autoconfiguration failed", "error", err)
 			os.Exit(1)
@@ -63,17 +65,26 @@ func main() {
 		c.UpdateFreq = time.Second * 10
 		c.ModelConf.Name = name
 	}
+	var tc *telemetry.Client = nil
+	if c.TelConf != nil {
+		tc, err = telemetry.NewClient(c.TelConf, c.Name)
+		if err != nil {
+			slog.Error("Failed to create telemetry client", "error", err)
+			os.Exit(1)
+		}
+		go tc.ErrorLogging()
+	}
 
 	logging.SetID(c.Name)
 
-	os.Exit(run(c))
+	os.Exit(run(c, tc))
 }
 
-func run(c *peer.Config) int {
+func run(c *peer.Config, t *telemetry.Client) int {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 
-	m, err := model.NewModel(c.ModelConf)
+	m, err := model.NewModel(c.ModelConf, t)
 	if err != nil {
 		fmt.Printf("Failed to create model: %v\n", err)
 		os.Exit(1)
@@ -122,19 +133,21 @@ func randTime() time.Duration {
 func localPlay(m *model.Model, peer *peer.Me) {
 	slog.Info("Starting local play")
 	p := play.NewPlay(peer, m)
-	p.AddStep(&play.Train{})
-	p.AddStep(&play.Train{})
-	p.AddStep(&play.Eval{})
-	p.AddStep(&play.Wait{T: randTime()})
-	p.AddStep(&play.Train{})
-	p.AddStep(&play.Wait{T: randTime()})
-	p.AddStep(&play.Train{})
-	p.AddStep(&play.Eval{})
-	p.AddStep(&play.Wait{T: randTime()})
-	p.AddStep(&play.Train{})
-	p.AddStep(&play.Wait{T: randTime()})
-	p.AddStep(&play.Train{})
-	p.AddStep(&play.Eval{})
+	for range 20 {
+		p.AddStep(&play.Train{})
+		p.AddStep(&play.Train{})
+		p.AddStep(&play.Eval{})
+		p.AddStep(&play.Wait{T: randTime()})
+		p.AddStep(&play.Train{})
+		p.AddStep(&play.Wait{T: randTime()})
+		p.AddStep(&play.Train{})
+		p.AddStep(&play.Eval{})
+		p.AddStep(&play.Wait{T: randTime()})
+		p.AddStep(&play.Train{})
+		p.AddStep(&play.Wait{T: randTime()})
+		p.AddStep(&play.Train{})
+		p.AddStep(&play.Eval{})
+	}
 
 	peer.WaitReady()
 	p.Run()
