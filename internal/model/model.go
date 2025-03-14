@@ -40,7 +40,7 @@ func (m *Model) Eval() error {
 	}
 	slog.Info("Evaluated model", "accuracy", met.acc, "loss", met.loss)
 	if m.telemetry != nil {
-		go m.telemetry.RecordEvaluation(met.acc, met.loss)
+		go m.telemetry.RecordEvaluation(met.acc, met.loss, m.age)
 	}
 	return nil
 }
@@ -72,15 +72,18 @@ func (m *Model) Apply(weights *Weights) error {
 	if err := m.client.Apply(weights, ratio); err != nil {
 		return fmt.Errorf("failed to apply weights to model: %w", err)
 	}
+	if m.telemetry != nil {
+		go m.telemetry.RecordWeightApplication(m.age, weights.GetAge())
+	}
 	met, err := m.client.Train()
 	if err != nil {
 		return fmt.Errorf("failed to train model: %w", err)
 	}
-	slog.Info("Applied weights to model", "loss", met.loss)
 	m.age = max(m.age, weights.GetAge()) + 1
 	if m.telemetry != nil {
-		go m.telemetry.RecordWeightApplication(m.age, weights.GetAge(), met.loss)
+		go m.telemetry.RecordTraining(met.loss, m.age)
 	}
+	slog.Info("Applied weights to model", "age", m.age, "loss", met.loss)
 	m.executeCallback()
 	return nil
 }

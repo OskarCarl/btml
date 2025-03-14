@@ -135,6 +135,7 @@ func localPlay(m *model.Model, peer *peer.Me) {
 	p := play.NewPlay(peer, m)
 	for range 20 {
 		p.AddStep(&play.Train{})
+		p.AddStep(&play.Wait{T: randTime()})
 		p.AddStep(&play.Train{})
 		p.AddStep(&play.Eval{})
 		p.AddStep(&play.Wait{T: randTime()})

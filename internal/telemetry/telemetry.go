@@ -58,7 +58,7 @@ func (c *Client) RecordTraining(loss float32, age int) {
 	c.writeAPI.WritePoint(point)
 }
 
-func (c *Client) RecordEvaluation(accuracy, loss float32) {
+func (c *Client) RecordEvaluation(accuracy, loss float32, age int) {
 	point := influxdb2.NewPoint(
 		"model_evaluation",
 		c.tags,
@@ -66,6 +66,7 @@ func (c *Client) RecordEvaluation(accuracy, loss float32) {
 			"peer":     c.name,
 			"accuracy": accuracy,
 			"loss":     loss,
+			"age":      age,
 		},
 		time.Now(),
 	)
@@ -73,7 +74,7 @@ func (c *Client) RecordEvaluation(accuracy, loss float32) {
 	c.writeAPI.WritePoint(point)
 }
 
-func (c *Client) RecordWeightApplication(localAge, remoteAge int, loss float32) {
+func (c *Client) RecordWeightApplication(localAge, remoteAge int) {
 	point := influxdb2.NewPoint(
 		"weight_application",
 		c.tags,
@@ -81,7 +82,6 @@ func (c *Client) RecordWeightApplication(localAge, remoteAge int, loss float32) 
 			"peer":       c.name,
 			"local_age":  localAge,
 			"remote_age": remoteAge,
-			"loss":       loss,
 		},
 		time.Now(),
 	)
