@@ -43,7 +43,7 @@ services:
     networks:
       - backend
     environment:
-      LOG_LEVEL: INFO
+      LOG_LEVEL: WARN
 
   peer:
     build:
@@ -71,7 +71,7 @@ services:
     networks:
       - backend
     environment:
-      LOG_LEVEL: DEBUG
+      LOG_LEVEL: WARN
 
 volumes:
   influxdb-data:

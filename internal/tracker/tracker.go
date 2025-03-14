@@ -3,6 +3,7 @@ package tracker
 import (
 	"log/slog"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -16,8 +17,12 @@ type touch struct {
 }
 
 type Tracker struct {
-	addr      string
-	peers     *structs.Peerlist
+	addr           string
+	peers          *structs.Peerlist
+	blockedPeerIds struct {
+		list []string
+		sync.Mutex
+	}
 	conf      *Config
 	telemetry struct {
 		enabled bool
@@ -42,6 +47,12 @@ func NewTracker(addr string, conf string) *Tracker {
 	t := &Tracker{
 		addr: addr,
 		conf: c,
+		blockedPeerIds: struct {
+			list []string
+			sync.Mutex
+		}{
+			list: []string{},
+		},
 		telemetry: struct {
 			enabled bool
 			ready   bool

@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"net"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/vs-ude/btml/internal/structs"
@@ -43,8 +44,13 @@ func (t *Tracker) getRandomUnusedPeerID() (int, error) {
 	}
 	for {
 		i, _ := rand.Int(rand.Reader, big.NewInt(int64(t.conf.Tracker.MaxPeers)))
-		if !t.peers.Has(strconv.Itoa(int(i.Int64()))) {
+		candidate := strconv.Itoa(int(i.Int64()))
+		t.blockedPeerIds.Lock()
+		if !slices.Contains(t.blockedPeerIds.list, candidate) {
+			t.blockedPeerIds.list = append(t.blockedPeerIds.list, candidate)
+			t.blockedPeerIds.Unlock()
 			return int(i.Int64()), nil
 		}
+		t.blockedPeerIds.Unlock()
 	}
 }
