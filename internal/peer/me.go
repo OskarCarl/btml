@@ -32,6 +32,7 @@ type Me struct {
 	tracker    *Tracker
 	peerset    *PeerSet
 	pss        PeerSelectionStrategy
+	pds        DistributionStrategy
 	conns      sync.Map // map[string]quic.Connection
 	data       storage
 }
@@ -44,6 +45,7 @@ func NewMe(config *Config) *Me {
 		cancel:     cancel,
 		config:     config,
 		pss:        &RandomPeerSelectionStrategy{},
+		pds:        NewHalfDistanceDistribution(10, 40),
 		quicConfig: generateQUICConfig(),
 		conns:      sync.Map{},
 		tlsConfig:  generateTLSConfig(),

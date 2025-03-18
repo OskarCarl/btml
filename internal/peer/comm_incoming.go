@@ -5,8 +5,6 @@ import (
 	"errors"
 	"io"
 	"log/slog"
-	"net"
-	"sync"
 
 	"github.com/quic-go/quic-go"
 	"github.com/vs-ude/btml/internal/model"
@@ -95,43 +93,4 @@ func (me *Me) handleStream(stream quic.Stream) {
 		slog.Info("Received model update", "source", update.Source, "age", update.Age)
 		me.data.incomingChan <- w
 	}
-}
-
-func (me *Me) Outgoing() {
-	defer me.Wg.Done()
-
-	wg := &sync.WaitGroup{}
-	for {
-		select {
-		case <-me.Ctx.Done():
-			return
-		case data := <-me.data.outgoingChan:
-			wg.Wait() // We wait here so the application can be stopped at any time
-			me.data.outgoingStorage[data.GetAge()] = data
-			bytes, err := marshalUpdate(data, me.config.Name)
-			if err != nil {
-				slog.Warn("Failed marshaling model update", "error", err)
-				continue
-			}
-			for _, peer := range me.peerset.Active {
-				wg.Add(1)
-				go peer.Send(bytes, data.GetAge(), wg, me.Ctx, me.dialPeer)
-			}
-		}
-	}
-}
-
-func marshalUpdate(data *model.Weights, source string) ([]byte, error) {
-	// Create and marshal the model update
-	update := &ModelUpdate{
-		Source:  source,
-		Weights: data.Get(),
-		Age:     int64(data.GetAge()),
-	}
-
-	return proto.Marshal(update)
-}
-
-func (me *Me) dialPeer(addr net.Addr) (quic.Connection, error) {
-	return me.server.Dial(me.Ctx, addr, me.tlsConfig, me.quicConfig)
 }

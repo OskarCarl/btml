@@ -34,6 +34,9 @@ func Start(c *Config, m *model.Model) *Me {
 	me.Wg.Add(1)
 	go me.Outgoing()
 
+	me.Wg.Add(1)
+	go me.LaggingPeersLoop()
+
 	return me
 }
 
