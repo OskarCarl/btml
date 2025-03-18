@@ -201,6 +201,6 @@ func resolveLogPath(c *Config) (string, error) {
 
 // getRatio calculates the ratio of the model's own age as used by the Python model.
 func getRatio(m *Model, weights *Weights) float32 {
-	ratio := float32(m.age) / (float32(m.age) + float32(weights.GetAge()))
+	ratio := float32(weights.GetAge()) / (float32(m.age) + float32(weights.GetAge()))
 	return ratio
 }
