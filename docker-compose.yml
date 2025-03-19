@@ -40,6 +40,8 @@ services:
       - "8080:8080"
     volumes:
       - ./config/tracker:/config
+    depends_on:
+      - influx
     networks:
       - backend
     environment:
@@ -68,10 +70,11 @@ services:
       - ./model/logs:/logs:rw
     depends_on:
       - tracker
+      - influx
     networks:
       - backend
     environment:
-      LOG_LEVEL: WARN
+      LOG_LEVEL: DEBUG
 
 volumes:
   influxdb-data:

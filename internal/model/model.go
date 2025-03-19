@@ -18,6 +18,7 @@ import (
 type Model struct {
 	client                *ModelClient
 	age                   int
+	lastEval              int
 	modelModifiedCallback func(*Weights)
 	telemetry             *telemetry.Client
 	sync.Mutex
@@ -203,4 +204,21 @@ func resolveLogPath(c *Config) (string, error) {
 func getRatio(m *Model, weights *Weights) float32 {
 	ratio := float32(weights.GetAge()) / (float32(m.age) + float32(weights.GetAge()))
 	return ratio
+}
+
+func (m *Model) GetAge() int {
+	return m.age
+}
+
+func (m *Model) EvalLoop() {
+	timer := time.NewTimer(time.Second * 5)
+	for {
+		<-timer.C
+		if m.age <= m.lastEval {
+			timer.Reset(time.Second * 30)
+			continue
+		}
+		m.Eval()
+		timer.Reset(time.Second * 30)
+	}
 }

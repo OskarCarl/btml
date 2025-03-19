@@ -28,7 +28,7 @@ func main() {
 		slog.Error("Failed to create model", "error", err)
 		os.Exit(1)
 	}
-	me := peer.NewMe(&peer.Config{})
+	me := peer.NewMe(&peer.Config{}, nil)
 	p := play.NewPlay(me, mod)
 	p.AddStep(&play.Train{})
 	p.AddStep(&play.Eval{})

@@ -10,6 +10,7 @@ import (
 
 	"github.com/quic-go/quic-go"
 	"github.com/vs-ude/btml/internal/model"
+	"github.com/vs-ude/btml/internal/telemetry"
 )
 
 type storage struct {
@@ -35,9 +36,10 @@ type Me struct {
 	pds        DistributionStrategy
 	conns      sync.Map // map[string]quic.Connection
 	data       storage
+	telemetry  *telemetry.Client
 }
 
-func NewMe(config *Config) *Me {
+func NewMe(config *Config, telemetry *telemetry.Client) *Me {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Me{
 		Wg:         sync.WaitGroup{},
@@ -54,6 +56,7 @@ func NewMe(config *Config) *Me {
 			outgoingChan:    make(chan *model.Weights, 5),
 			outgoingStorage: make(map[int]*model.Weights),
 		},
+		telemetry: telemetry,
 	}
 }
 

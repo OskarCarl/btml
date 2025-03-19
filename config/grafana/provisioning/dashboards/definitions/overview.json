@@ -28,47 +28,7 @@
 				"uid": "P951FEA4DE68E13C5"
 			},
 			"fieldConfig": {
-				"defaults": {
-					"color": {
-						"mode": "palette-classic"
-					},
-					"custom": {
-						"axisBorderShow": false,
-						"axisCenteredZero": false,
-						"axisColorMode": "text",
-						"axisLabel": "",
-						"axisPlacement": "auto",
-						"fillOpacity": 50,
-						"hideFrom": {
-							"legend": false,
-							"tooltip": false,
-							"viz": false
-						},
-						"lineStyle": {
-							"fill": "solid"
-						},
-						"lineWidth": 3,
-						"pointShape": "circle",
-						"pointSize": {
-							"fixed": 27
-						},
-						"pointStrokeWidth": 1,
-						"scaleDistribution": {
-							"type": "linear"
-						},
-						"show": "lines"
-					},
-					"mappings": [],
-					"thresholds": {
-						"mode": "absolute",
-						"steps": [
-							{
-								"color": "green",
-								"value": null
-							}
-						]
-					}
-				},
+				"defaults": {},
 				"overrides": []
 			},
 			"gridPos": {
@@ -77,36 +37,11 @@
 				"x": 0,
 				"y": 0
 			},
-			"id": 1,
+			"id": 6,
 			"options": {
-				"legend": {
-					"calcs": [],
-					"displayMode": "list",
-					"placement": "bottom",
-					"showLegend": true
-				},
-				"mapping": "auto",
-				"series": [
-					{
-						"x": {
-							"matcher": {
-								"id": "byName",
-								"options": "age"
-							}
-						},
-						"y": {
-							"matcher": {
-								"id": "byName",
-								"options": "loss"
-							}
-						}
-					}
-				],
-				"tooltip": {
-					"hideZeros": false,
-					"mode": "single",
-					"sort": "none"
-				}
+				"edges": {},
+				"nodes": {},
+				"zoomMode": "cooperative"
 			},
 			"pluginVersion": "11.5.2",
 			"targets": [
@@ -115,34 +50,38 @@
 						"type": "influxdb",
 						"uid": "P951FEA4DE68E13C5"
 					},
-					"query": "from(bucket:\"${bucket}\")\n  |> range(start: -12h)\n  |> filter(fn: (r) => (r._measurement == \"model_training\"))",
-					"refId": "A"
+					"hide": false,
+					"query": "SELECT \"id\", \"age\" FROM \"$run\".\"autogen\".\"peer_online\"",
+					"rawQuery": true,
+					"refId": "A",
+					"resultFormat": "time_series"
 				}
 			],
-			"title": "Train Loss",
+			"title": "Nodes",
 			"transformations": [
 				{
-					"id": "merge",
+					"id": "joinByField",
 					"options": {}
 				},
 				{
-					"id": "partitionByValues",
+					"id": "renameByRegex",
 					"options": {
-						"fields": ["peer"],
-						"keepFields": false,
-						"naming": {
-							"asLabels": true
-						}
+						"regex": ".*\\.(id)",
+						"renamePattern": "$1"
+					}
+				},
+				{
+					"id": "renameByRegex",
+					"options": {
+						"regex": ".*\\.(age)",
+						"renamePattern": "mainstat"
 					}
 				}
 			],
-			"type": "xychart"
+			"type": "nodeGraph"
 		},
 		{
-			"datasource": {
-				"type": "influxdb",
-				"uid": "P951FEA4DE68E13C5"
-			},
+			"datasource": "InfluxDB",
 			"fieldConfig": {
 				"defaults": {
 					"color": {
@@ -193,7 +132,7 @@
 				"x": 12,
 				"y": 0
 			},
-			"id": 2,
+			"id": 1,
 			"options": {
 				"legend": {
 					"calcs": [],
@@ -207,13 +146,13 @@
 						"x": {
 							"matcher": {
 								"id": "byName",
-								"options": "age"
+								"options": "model_evaluation.age"
 							}
 						},
 						"y": {
 							"matcher": {
 								"id": "byName",
-								"options": "loss"
+								"options": "model_evaluation.loss"
 							}
 						}
 					}
@@ -227,24 +166,47 @@
 			"pluginVersion": "11.5.2",
 			"targets": [
 				{
-					"datasource": {
-						"type": "influxdb",
-						"uid": "P951FEA4DE68E13C5"
-					},
-					"query": "from(bucket:\"${bucket}\")\n  |> range(start: -12h)\n  |> filter(fn: (r) => (r._measurement == \"model_evaluation\"))\n  |> filter(fn: (r) => (r._field == \"loss\" or r._field == \"age\" or r._field == \"peer\"))",
-					"refId": "A"
+					"datasource": "InfluxDB",
+					"groupBy": [],
+					"hide": false,
+					"measurement": "model_training",
+					"orderByTime": "ASC",
+					"policy": "$run",
+					"query": "SELECT \"loss\",\"age\",\"peer_id\" FROM \"$run\".\"autogen\".\"model_evaluation\"",
+					"rawQuery": true,
+					"refId": "A",
+					"resultFormat": "time_series",
+					"select": [
+						[
+							{
+								"params": ["value"],
+								"type": "field"
+							}
+						]
+					],
+					"tags": []
 				}
 			],
 			"title": "Eval Loss",
 			"transformations": [
 				{
-					"id": "merge",
-					"options": {}
+					"id": "joinByField",
+					"options": {
+						"byField": "Time",
+						"mode": "outer"
+					}
+				},
+				{
+					"id": "renameByRegex",
+					"options": {
+						"regex": ".*\\.(loss|age|peer_id).*",
+						"renamePattern": "$1"
+					}
 				},
 				{
 					"id": "partitionByValues",
 					"options": {
-						"fields": ["peer"],
+						"fields": ["peer_id"],
 						"keepFields": false,
 						"naming": {
 							"asLabels": true
@@ -255,10 +217,143 @@
 			"type": "xychart"
 		},
 		{
-			"datasource": {
-				"type": "influxdb",
-				"uid": "P951FEA4DE68E13C5"
+			"datasource": "InfluxDB",
+			"fieldConfig": {
+				"defaults": {
+					"color": {
+						"mode": "palette-classic"
+					},
+					"custom": {
+						"axisBorderShow": false,
+						"axisCenteredZero": false,
+						"axisColorMode": "text",
+						"axisLabel": "",
+						"axisPlacement": "auto",
+						"fillOpacity": 50,
+						"hideFrom": {
+							"legend": false,
+							"tooltip": false,
+							"viz": false
+						},
+						"lineStyle": {
+							"fill": "solid"
+						},
+						"lineWidth": 3,
+						"pointShape": "circle",
+						"pointSize": {
+							"fixed": 27
+						},
+						"pointStrokeWidth": 1,
+						"scaleDistribution": {
+							"type": "linear"
+						},
+						"show": "lines"
+					},
+					"mappings": [],
+					"thresholds": {
+						"mode": "absolute",
+						"steps": [
+							{
+								"color": "green",
+								"value": null
+							}
+						]
+					}
+				},
+				"overrides": []
 			},
+			"gridPos": {
+				"h": 8,
+				"w": 12,
+				"x": 0,
+				"y": 8
+			},
+			"id": 4,
+			"options": {
+				"legend": {
+					"calcs": [],
+					"displayMode": "list",
+					"placement": "bottom",
+					"showLegend": true
+				},
+				"mapping": "auto",
+				"series": [
+					{
+						"x": {
+							"matcher": {
+								"id": "byName",
+								"options": "model_training.age"
+							}
+						},
+						"y": {
+							"matcher": {
+								"id": "byName",
+								"options": "model_training.loss"
+							}
+						}
+					}
+				],
+				"tooltip": {
+					"hideZeros": false,
+					"mode": "single",
+					"sort": "none"
+				}
+			},
+			"pluginVersion": "11.5.2",
+			"targets": [
+				{
+					"datasource": "InfluxDB",
+					"groupBy": [],
+					"hide": false,
+					"measurement": "model_training",
+					"orderByTime": "ASC",
+					"policy": "$run",
+					"query": "SELECT \"loss\",\"age\",\"peer_id\" FROM \"$run\".\"autogen\".\"model_training\"",
+					"rawQuery": true,
+					"refId": "A",
+					"resultFormat": "time_series",
+					"select": [
+						[
+							{
+								"params": ["value"],
+								"type": "field"
+							}
+						]
+					],
+					"tags": []
+				}
+			],
+			"title": "Train Loss",
+			"transformations": [
+				{
+					"id": "joinByField",
+					"options": {
+						"byField": "Time",
+						"mode": "outer"
+					}
+				},
+				{
+					"id": "renameByRegex",
+					"options": {
+						"regex": ".*\\.(loss|age|peer_id).*",
+						"renamePattern": "$1"
+					}
+				},
+				{
+					"id": "partitionByValues",
+					"options": {
+						"fields": ["peer_id"],
+						"keepFields": false,
+						"naming": {
+							"asLabels": true
+						}
+					}
+				}
+			],
+			"type": "xychart"
+		},
+		{
+			"datasource": "InfluxDB",
 			"fieldConfig": {
 				"defaults": {
 					"color": {
@@ -311,7 +406,7 @@
 				"x": 12,
 				"y": 8
 			},
-			"id": 3,
+			"id": 5,
 			"options": {
 				"legend": {
 					"calcs": [],
@@ -325,13 +420,13 @@
 						"x": {
 							"matcher": {
 								"id": "byName",
-								"options": "age"
+								"options": "model_evaluation.age"
 							}
 						},
 						"y": {
 							"matcher": {
 								"id": "byName",
-								"options": "accuracy"
+								"options": "model_evaluation.accuracy"
 							}
 						}
 					}
@@ -345,24 +440,47 @@
 			"pluginVersion": "11.5.2",
 			"targets": [
 				{
-					"datasource": {
-						"type": "influxdb",
-						"uid": "P951FEA4DE68E13C5"
-					},
-					"query": "from(bucket:\"${bucket}\")\n  |> range(start: -12h)\n  |> filter(fn: (r) => (r._measurement == \"model_evaluation\"))\n  |> filter(fn: (r) => (r._field == \"accuracy\" or r._field == \"age\" or r._field == \"peer\"))",
-					"refId": "A"
+					"datasource": "InfluxDB",
+					"groupBy": [],
+					"hide": false,
+					"measurement": "model_training",
+					"orderByTime": "ASC",
+					"policy": "$run",
+					"query": "SELECT \"accuracy\",\"age\",\"peer_id\" FROM \"$run\".\"autogen\".\"model_evaluation\"",
+					"rawQuery": true,
+					"refId": "A",
+					"resultFormat": "time_series",
+					"select": [
+						[
+							{
+								"params": ["value"],
+								"type": "field"
+							}
+						]
+					],
+					"tags": []
 				}
 			],
-			"title": "Eval Acc",
+			"title": "Eval Accuracy",
 			"transformations": [
 				{
-					"id": "merge",
-					"options": {}
+					"id": "joinByField",
+					"options": {
+						"byField": "Time",
+						"mode": "outer"
+					}
+				},
+				{
+					"id": "renameByRegex",
+					"options": {
+						"regex": ".*\\.(accuracy|age|peer_id).*",
+						"renamePattern": "$1"
+					}
 				},
 				{
 					"id": "partitionByValues",
 					"options": {
-						"fields": ["peer"],
+						"fields": ["peer_id"],
 						"keepFields": false,
 						"naming": {
 							"asLabels": true
@@ -380,21 +498,48 @@
 	"templating": {
 		"list": [
 			{
-				"current": {},
-				"datasource": {
-					"type": "influxdb",
-					"uid": "P951FEA4DE68E13C5"
+				"allowCustomValue": false,
+				"current": {
+					"text": "btml-2025-03-19-15-42-28",
+					"value": "btml-2025-03-19-15-42-28"
 				},
-				"definition": "buckets()\n  |> filter(fn: (r) => r.name =~ /btml-.*/)",
-				"label": "Bucket",
-				"name": "bucket",
+				"datasource": "InfluxDB",
+				"definition": "SELECT \"run\" FROM \"runs\"",
+				"label": "Run",
+				"name": "run",
 				"options": [],
 				"query": {
-					"query": "buckets()\n  |> filter(fn: (r) => r.name =~ /btml-.*/)"
+					"query": "SELECT \"run\" FROM \"runs\"",
+					"refId": "InfluxVariableQueryEditor-VariableQuery"
 				},
 				"refresh": 1,
 				"regex": "",
 				"sort": 2,
+				"type": "query"
+			},
+			{
+				"allowCustomValue": false,
+				"current": {
+					"text": "All",
+					"value": "$__all"
+				},
+				"datasource": {
+					"type": "influxdb",
+					"uid": "P951FEA4DE68E13C5"
+				},
+				"definition": "SELECT \"id\" FROM \"$run\".\"autogen\".\"peer_online\"",
+				"includeAll": false,
+				"label": "Peers",
+				"multi": true,
+				"name": "peers",
+				"options": [],
+				"query": {
+					"query": "SELECT \"id\" FROM \"$run\".\"autogen\".\"peer_online\"",
+					"refId": "InfluxVariableQueryEditor-VariableQuery"
+				},
+				"refresh": 2,
+				"regex": "",
+				"sort": 7,
 				"type": "query"
 			}
 		]
@@ -407,6 +552,6 @@
 	"timezone": "browser",
 	"title": "Overview",
 	"uid": "deftllcm0xr7ka",
-	"version": 1,
+	"version": 4,
 	"weekStart": ""
 }

@@ -71,6 +71,8 @@ func main() {
 		if err != nil {
 			slog.Error("Failed to create telemetry client", "error", err)
 			os.Exit(1)
+		} else {
+			slog.Debug("Telemetry client started")
 		}
 		go tc.ErrorLogging()
 	}
@@ -96,7 +98,7 @@ func run(c *peer.Config, t *telemetry.Client) int {
 	}
 	defer m.Shutdown()
 
-	me := peer.Start(c, m)
+	me := peer.Start(c, m, t)
 	defer me.Shutdown()
 
 	strategy := model.NewNaiveStrategy(m)
@@ -110,6 +112,10 @@ func run(c *peer.Config, t *telemetry.Client) int {
 		}
 		me.Send(weights)
 	})
+
+	if t != nil {
+		go m.EvalLoop()
+	}
 
 	go localPlay(m, me)
 
@@ -133,21 +139,17 @@ func randTime() time.Duration {
 func localPlay(m *model.Model, peer *peer.Me) {
 	slog.Info("Starting local play")
 	p := play.NewPlay(peer, m)
-	for range 20 {
+	for range 100 {
 		p.AddStep(&play.Train{})
-		p.AddStep(&play.Wait{T: randTime()})
-		p.AddStep(&play.Train{})
-		p.AddStep(&play.Eval{})
 		p.AddStep(&play.Wait{T: randTime()})
 		p.AddStep(&play.Train{})
 		p.AddStep(&play.Wait{T: randTime()})
 		p.AddStep(&play.Train{})
-		p.AddStep(&play.Eval{})
 		p.AddStep(&play.Wait{T: randTime()})
 		p.AddStep(&play.Train{})
 		p.AddStep(&play.Wait{T: randTime()})
 		p.AddStep(&play.Train{})
-		p.AddStep(&play.Eval{})
+		p.AddStep(&play.Wait{T: randTime()})
 	}
 
 	peer.WaitReady()

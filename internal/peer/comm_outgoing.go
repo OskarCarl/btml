@@ -31,6 +31,7 @@ func (me *Me) Outgoing() {
 				if distribute, _ := me.pds.Decide(peer, data); !distribute {
 					continue
 				}
+				slog.Debug("Sending data to peer", "target", peer.Name, "age", data.GetAge())
 				wg.Add(1)
 				go peer.Send(bytes, data.GetAge(), wg, me.Ctx, me.dialPeer)
 			}
@@ -61,6 +62,7 @@ func (me *Me) LaggingPeersLoop() {
 					slog.Warn("Failed marshaling model update", "error", err)
 					continue
 				}
+				slog.Debug("Sending data to lagging peer", "target", peer.Name, "age", data.GetAge())
 				wg.Add(1)
 				go peer.Send(bytes, data.GetAge(), wg, me.Ctx, me.dialPeer)
 

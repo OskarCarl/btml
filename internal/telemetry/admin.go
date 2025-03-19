@@ -19,8 +19,12 @@ func InitConf(c *structs.TelemetryConf) error {
 	if err := getOrgID(c); err != nil {
 		return fmt.Errorf("failed to get org ID: %w", err)
 	}
-	if err := createBucket(c); err != nil {
+	name := fmt.Sprintf("btml-%s", time.Now().Format("2006-01-02-15-04-05"))
+	if err := createBucket(c, name); err != nil {
 		return fmt.Errorf("failed to create bucket: %w", err)
+	}
+	if err := writeBucketName(c, name); err != nil {
+		return fmt.Errorf("failed to write bucket name: %w", err)
 	}
 	if err := tradeToken(c); err != nil {
 		return fmt.Errorf("failed to trade token: %w", err)
@@ -65,7 +69,7 @@ func getOrgID(c *structs.TelemetryConf) error {
 	return nil
 }
 
-func createBucket(c *structs.TelemetryConf) error {
+func createBucket(c *structs.TelemetryConf, name string) error {
 	// Setup
 	req, err := setupPostRequest(c, "/buckets")
 	if err != nil {
@@ -74,8 +78,8 @@ func createBucket(c *structs.TelemetryConf) error {
 	body := bytes.NewBuffer([]byte{})
 	err = json.Compact(body, fmt.Appendf(nil, `{
 			"orgID": "%s",
-			"name": "btml-%s"
-		}`, c.Org, time.Now().Format("2006-01-02-15-04-05")))
+			"name": "%s"
+		}`, c.Org, name))
 	if err != nil {
 		return err
 	}
@@ -101,6 +105,29 @@ func createBucket(c *structs.TelemetryConf) error {
 	}
 	c.Bucket = bucket.ID
 	slog.Debug("Received bucket response from InfluxDB", "bucket", bucket)
+	return nil
+}
+
+func writeBucketName(c *structs.TelemetryConf, name string) error {
+	// Setup
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/api/v2/write?bucket=%s&org=%s", c.URL, "default", c.Org), nil)
+	if err == nil {
+		req.Header.Set("Authorization", fmt.Sprintf("Token %s", c.Token))
+		req.Header.Set("Content-Type", "text/plain; charset=utf-8")
+	}
+	body := bytes.NewBuffer(fmt.Appendf(nil, "runs run=\"%s\"", name))
+
+	// Execute
+	resp, err := execRequest(req, body)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("unexpected status code: %s", resp.Status)
+	}
+
+	slog.Debug("Stored bucket/run name in InfluxDB", "bucket", name)
 	return nil
 }
 

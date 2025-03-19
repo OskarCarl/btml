@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/vs-ude/btml/internal/structs"
+	"github.com/vs-ude/btml/internal/telemetry"
 )
 
 type ErrPeerInactive error
@@ -14,13 +15,16 @@ type PeerSet struct {
 	Active  map[string]*KnownPeer // subset of Known
 	Known   map[string]*KnownPeer
 	MaxSize int
+	telemetry *telemetry.Client
+
 }
 
-func NewPeerSet(size int) *PeerSet {
+func NewPeerSet(size int, telemetry *telemetry.Client) *PeerSet {
 	return &PeerSet{
 		Active:  make(map[string]*KnownPeer, size),
 		Known:   make(map[string]*KnownPeer),
 		MaxSize: size,
+		telemetry: telemetry,
 	}
 }
 
@@ -34,7 +38,7 @@ func (ps *PeerSet) Add(p *structs.Peer) error {
 	case status == UNCHOKED:
 		ps.Known[p.Name].Update(p)
 	case status == UNKNOWN:
-		ps.Known[p.Name] = NewKnownPeer(p)
+		ps.Known[p.Name] = NewKnownPeer(p, ps.telemetry)
 	}
 	return nil
 }

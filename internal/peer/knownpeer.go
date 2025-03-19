@@ -10,6 +10,7 @@ import (
 
 	"github.com/quic-go/quic-go"
 	"github.com/vs-ude/btml/internal/structs"
+	"github.com/vs-ude/btml/internal/telemetry"
 	"github.com/vs-ude/btml/internal/trust"
 )
 
@@ -27,16 +28,18 @@ type KnownPeer struct {
 	LastUpdatedAge int
 	State          peerStatus
 	conn           quic.Connection
+	telemetry      *telemetry.Client
 	structs.Peer
 	sync.Mutex
 }
 
-func NewKnownPeer(p *structs.Peer) *KnownPeer {
+func NewKnownPeer(p *structs.Peer, telemetry *telemetry.Client) *KnownPeer {
 	return &KnownPeer{
 		S:              0,
 		LastUpdatedAge: 0,
 		State:          CHOKED,
 		conn:           nil,
+		telemetry:      telemetry,
 		Peer:           *p.Copy(),
 	}
 }
@@ -100,6 +103,9 @@ func (kp *KnownPeer) Send(data []byte, age int, wg *sync.WaitGroup, ctx context.
 		slog.Warn("Failed sending data", "peer", kp.Name, "error", err)
 	} else {
 		kp.LastUpdatedAge = age
+		if kp.telemetry != nil {
+			kp.telemetry.RecordSend(age, kp.Name)
+		}
 	}
 }
 

@@ -38,7 +38,7 @@ func NewHalfDistanceDistribution(lastN int, stepSizeCap int) *HalfDistanceDistri
 }
 
 func (h *HalfDistanceDistribution) Decide(p *KnownPeer, w *model.Weights) (bool, error) {
-	if p.LastUpdatedAge < (w.GetAge() / 2) {
+	if w.GetAge() > 4 && p.LastUpdatedAge < (w.GetAge()/2) {
 		return false, nil
 	}
 	return true, nil

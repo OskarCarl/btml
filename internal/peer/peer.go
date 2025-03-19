@@ -7,10 +7,11 @@ import (
 
 	"github.com/vs-ude/btml/internal/model"
 	"github.com/vs-ude/btml/internal/structs"
+	"github.com/vs-ude/btml/internal/telemetry"
 )
 
-func Start(c *Config, m *model.Model) *Me {
-	me := NewMe(c)
+func Start(c *Config, m *model.Model, t *telemetry.Client) *Me {
+	me := NewMe(c, t)
 	me.Setup()
 	self := &structs.Peer{
 		Name:        c.Name,
@@ -24,7 +25,7 @@ func Start(c *Config, m *model.Model) *Me {
 	}
 	me.tracker.Setup(c, self)
 
-	me.peerset = NewPeerSet(c.PeersetSize)
+	me.peerset = NewPeerSet(c.PeersetSize, me.telemetry)
 	me.Wg.Add(1)
 	go me.Listen()
 
@@ -36,6 +37,8 @@ func Start(c *Config, m *model.Model) *Me {
 
 	me.Wg.Add(1)
 	go me.LaggingPeersLoop()
+
+	t.RecordOnline(m.GetAge())
 
 	return me
 }

@@ -6,9 +6,9 @@ datasources:
     access: proxy
     url: http://influx:8086
     jsonData:
-      version: Flux
       organization: default
-      defaultBucket: default
+      dbName: default
       tlsSkipVerify: true
+      httpHeaderName1: Authorization
     secureJsonData:
-      token: my-super-secret-admin-token
+      httpHeaderValue1: "Token my-super-secret-admin-token"

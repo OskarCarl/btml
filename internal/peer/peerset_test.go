@@ -39,7 +39,7 @@ func buildPeerSet() *peer.PeerSet {
 		}
 	}
 
-	ps := peer.NewPeerSet(8)
+	ps := peer.NewPeerSet(8, nil)
 
 	for i := range 8 {
 		n := strconv.Itoa(i)

@@ -3,7 +3,6 @@ package telemetry
 import (
 	"context"
 	"fmt"
-	"time"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/influxdata/influxdb-client-go/v2/api"
@@ -23,7 +22,7 @@ func NewClient(conf *structs.TelemetryConf, peerID string) (*Client, error) {
 
 	// Basic tags that will be added to all points
 	tags := map[string]string{
-		// "peer_id": peerID,
+		"peer_id": peerID,
 	}
 
 	online, err := client.Ping(context.Background())
@@ -41,50 +40,4 @@ func NewClient(conf *structs.TelemetryConf, peerID string) (*Client, error) {
 
 func (c *Client) Close() {
 	c.client.Close()
-}
-
-func (c *Client) RecordTraining(loss float32, age int) {
-	point := influxdb2.NewPoint(
-		"model_training",
-		c.tags,
-		map[string]any{
-			"peer": c.name,
-			"loss": loss,
-			"age":  age,
-		},
-		time.Now(),
-	)
-
-	c.writeAPI.WritePoint(point)
-}
-
-func (c *Client) RecordEvaluation(accuracy, loss float32, age int) {
-	point := influxdb2.NewPoint(
-		"model_evaluation",
-		c.tags,
-		map[string]any{
-			"peer":     c.name,
-			"accuracy": accuracy,
-			"loss":     loss,
-			"age":      age,
-		},
-		time.Now(),
-	)
-
-	c.writeAPI.WritePoint(point)
-}
-
-func (c *Client) RecordWeightApplication(localAge, remoteAge int) {
-	point := influxdb2.NewPoint(
-		"weight_application",
-		c.tags,
-		map[string]any{
-			"peer":       c.name,
-			"local_age":  localAge,
-			"remote_age": remoteAge,
-		},
-		time.Now(),
-	)
-
-	c.writeAPI.WritePoint(point)
 }
