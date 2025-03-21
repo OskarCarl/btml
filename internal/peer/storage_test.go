@@ -7,14 +7,14 @@ import (
 	"github.com/vs-ude/btml/internal/peer"
 )
 
-func TestPrintQuadraticDistribution(t *testing.T) {
-	d := prepareQuadraticDistribution()
+func TestPrintQuadraticStorage(t *testing.T) {
+	d := prepareQuadraticStorage()
 	t.Log(d)
 }
 
-func TestQuadraticDistributionLast(t *testing.T) {
+func TestQuadraticStorageLast(t *testing.T) {
 	// prepare
-	d := prepareQuadraticDistribution()
+	d := prepareQuadraticStorage()
 	requests := []int{19, 20}
 	results := make([]int, 0, len(requests))
 
@@ -34,9 +34,9 @@ func TestQuadraticDistributionLast(t *testing.T) {
 	}
 }
 
-func TestQuadraticDistributionSteps(t *testing.T) {
+func TestQuadraticStorageSteps(t *testing.T) {
 	// prepare
-	d := prepareQuadraticDistribution()
+	d := prepareQuadraticStorage()
 	requests := []int{1, 2, 3, 5, 11, 15, 16}
 	expect := []int{2, 2, 4, 8, 14, 20, 20}
 	results := make([]int, 0, len(requests))
@@ -57,8 +57,8 @@ func TestQuadraticDistributionSteps(t *testing.T) {
 	}
 }
 
-func prepareQuadraticDistribution() peer.DistributionStrategy {
-	d := peer.NewQuadraticDistribution(3, 6)
+func prepareQuadraticStorage() peer.StorageStrategy {
+	d := peer.NewQuadraticStorage(3, 6)
 
 	for a := range 22 {
 		d.Store(*model.NewWeights(make([]byte, 0), a))
@@ -67,7 +67,7 @@ func prepareQuadraticDistribution() peer.DistributionStrategy {
 	return d
 }
 
-func retrieve(t *testing.T, d peer.DistributionStrategy, min int) int {
+func retrieve(t *testing.T, d peer.StorageStrategy, min int) int {
 	w, err := d.Retrieve(min)
 	if err != nil {
 		t.Errorf("error retrieving weights for %d: %v", min, err)

@@ -38,8 +38,6 @@ func Start(c *Config, m *model.Model, t *telemetry.Client) *Me {
 	me.Wg.Add(1)
 	go me.LaggingPeersLoop()
 
-	t.RecordOnline(m.GetAge())
-
 	return me
 }
 

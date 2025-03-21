@@ -33,7 +33,7 @@ type Me struct {
 	tracker    *Tracker
 	peerset    *PeerSet
 	pss        PeerSelectionStrategy
-	pds        DistributionStrategy
+	pds        StorageStrategy
 	conns      sync.Map // map[string]quic.Connection
 	data       storage
 	telemetry  *telemetry.Client
@@ -47,7 +47,7 @@ func NewMe(config *Config, telemetry *telemetry.Client) *Me {
 		cancel:     cancel,
 		config:     config,
 		pss:        &RandomPeerSelectionStrategy{},
-		pds:        NewQuadraticDistribution(10, 40),
+		pds:        NewQuadraticStorage(10, 40),
 		quicConfig: generateQUICConfig(),
 		conns:      sync.Map{},
 		tlsConfig:  generateTLSConfig(),

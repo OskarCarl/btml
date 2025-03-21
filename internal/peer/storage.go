@@ -9,7 +9,7 @@ import (
 	"github.com/vs-ude/btml/internal/model"
 )
 
-type DistributionStrategy interface {
+type StorageStrategy interface {
 	Decide(*KnownPeer, *model.Weights) (bool, error)
 	Store(model.Weights)
 	Retrieve(min int) (*model.Weights, error)
@@ -17,7 +17,7 @@ type DistributionStrategy interface {
 
 // Only distributes updates that are at less than twice as mature as what the
 // peer was sent last time.
-type QuadraticDistribution struct {
+type QuadraticStorage struct {
 	storage        map[int]*model.Weights
 	quadraticSteps []int
 	stepSizeCap    int
@@ -27,8 +27,8 @@ type QuadraticDistribution struct {
 	sync.Mutex
 }
 
-func NewQuadraticDistribution(lastN int, stepSizeCap int) *QuadraticDistribution {
-	return &QuadraticDistribution{
+func NewQuadraticStorage(lastN int, stepSizeCap int) *QuadraticStorage {
+	return &QuadraticStorage{
 		storage:        make(map[int]*model.Weights),
 		quadraticSteps: make([]int, 0),
 		stepSizeCap:    stepSizeCap,
@@ -38,7 +38,7 @@ func NewQuadraticDistribution(lastN int, stepSizeCap int) *QuadraticDistribution
 	}
 }
 
-func (h *QuadraticDistribution) Decide(p *KnownPeer, w *model.Weights) (bool, error) {
+func (h *QuadraticStorage) Decide(p *KnownPeer, w *model.Weights) (bool, error) {
 	if w.GetAge() > 4 && p.LastUpdatedAge < (w.GetAge()/2) {
 		return false, nil
 	}
@@ -46,7 +46,7 @@ func (h *QuadraticDistribution) Decide(p *KnownPeer, w *model.Weights) (bool, er
 }
 
 // Store ignores updates that are older than the current maximum age.
-func (h *QuadraticDistribution) Store(w model.Weights) {
+func (h *QuadraticStorage) Store(w model.Weights) {
 	a := w.GetAge()
 	// Should be strictly increasing anyway
 	if a < h.currentMax {
@@ -73,12 +73,12 @@ func (h *QuadraticDistribution) Store(w model.Weights) {
 	h.currentMax = a
 }
 
-func (h *QuadraticDistribution) progressStep() {
+func (h *QuadraticStorage) progressStep() {
 	h.nextStep = min(2*h.nextStep, h.nextStep+h.stepSizeCap)
 }
 
 // Retrieve retrieves the last stored weights.
-func (h *QuadraticDistribution) Retrieve(min int) (*model.Weights, error) {
+func (h *QuadraticStorage) Retrieve(min int) (*model.Weights, error) {
 	if min >= h.currentMax {
 		return nil, errors.New("already up to date")
 	}
@@ -113,7 +113,7 @@ func (h *QuadraticDistribution) Retrieve(min int) (*model.Weights, error) {
 	return nil, errors.New("no suitable weight found")
 }
 
-func (h *QuadraticDistribution) String() string {
+func (h *QuadraticStorage) String() string {
 	h.Lock()
 	defer h.Unlock()
 	ring := ""
