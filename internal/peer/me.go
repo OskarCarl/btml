@@ -47,7 +47,7 @@ func NewMe(config *Config, telemetry *telemetry.Client) *Me {
 		cancel:     cancel,
 		config:     config,
 		pss:        &RandomPeerSelectionStrategy{},
-		pds:        NewHalfDistanceDistribution(10, 40),
+		pds:        NewQuadraticDistribution(10, 40),
 		quicConfig: generateQUICConfig(),
 		conns:      sync.Map{},
 		tlsConfig:  generateTLSConfig(),
