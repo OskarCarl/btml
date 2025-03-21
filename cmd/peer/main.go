@@ -65,6 +65,8 @@ func main() {
 		c.UpdateFreq = time.Second * 10
 		c.ModelConf.Name = name
 	}
+	logging.SetID(c.Name)
+
 	var tc *telemetry.Client = nil
 	if c.TelConf != nil {
 		tc, err = telemetry.NewClient(c.TelConf, c.Name)
@@ -75,9 +77,8 @@ func main() {
 			slog.Debug("Telemetry client started")
 		}
 		go tc.ErrorLogging()
+		tc.RecordOnline(0)
 	}
-
-	logging.SetID(c.Name)
 
 	os.Exit(run(c, tc))
 }

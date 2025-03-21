@@ -12,18 +12,17 @@ import (
 type ErrPeerInactive error
 
 type PeerSet struct {
-	Active  map[string]*KnownPeer // subset of Known
-	Known   map[string]*KnownPeer
-	MaxSize int
+	Active    map[string]*KnownPeer // subset of Known
+	Known     map[string]*KnownPeer
+	MaxSize   int
 	telemetry *telemetry.Client
-
 }
 
 func NewPeerSet(size int, telemetry *telemetry.Client) *PeerSet {
 	return &PeerSet{
-		Active:  make(map[string]*KnownPeer, size),
-		Known:   make(map[string]*KnownPeer),
-		MaxSize: size,
+		Active:    make(map[string]*KnownPeer, size),
+		Known:     make(map[string]*KnownPeer),
+		MaxSize:   size,
 		telemetry: telemetry,
 	}
 }
@@ -112,4 +111,13 @@ func (ps *PeerSet) CheckPeer(new *structs.Peer) (peerStatus, error) {
 		}
 	}
 	return UNKNOWN, nil
+}
+
+func (ps *PeerSet) ActiveToString() []string {
+	keys := make([]string, 0, len(ps.Active))
+	for k := range ps.Active {
+		keys = append(keys, k)
+	}
+	slices.Sort(keys)
+	return keys
 }

@@ -22,6 +22,7 @@ func (me *Me) Outgoing() {
 		case data := <-me.data.outgoingChan:
 			wg.Wait() // We wait here so the application can be stopped at any time
 			me.pds.Store(*data)
+			me.telemetry.RecordOnline(data.GetAge())
 			bytes, err := marshalUpdate(data, me.config.Name)
 			if err != nil {
 				slog.Warn("Failed marshaling model update", "error", err)
@@ -55,6 +56,7 @@ func (me *Me) LaggingPeersLoop() {
 			wg.Wait() // We wait here so the application can be stopped at any time
 			for _, peer := range me.peerset.Active {
 				if data, err = me.pds.Retrieve(peer.LastUpdatedAge); err != nil {
+					slog.Debug("Did not get data for peer", "peer", peer.Name, "error", err)
 					continue
 				}
 				bytes, err := marshalUpdate(data, me.config.Name)

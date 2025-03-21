@@ -18,6 +18,7 @@ func (me *Me) MaintenanceLoop() {
 		case <-timer.C:
 			me.UpdatePeerset()
 			me.pss.Select(me)
+			me.sendTelemetry()
 			timer.Reset(wait)
 		}
 	}
@@ -29,4 +30,8 @@ func (me *Me) UpdatePeerset() {
 	for _, p := range me.tracker.Peers.List {
 		me.peerset.Add(p)
 	}
+}
+
+func (me *Me) sendTelemetry() {
+	me.telemetry.RecordActivePeers(me.peerset.ActiveToString())
 }

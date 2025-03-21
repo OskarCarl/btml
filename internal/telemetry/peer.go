@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"strings"
 	"time"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
@@ -34,5 +35,20 @@ func (c *Client) RecordOnline(age int) {
 	)
 
 	log("peer_online")
+	c.writeAPI.WritePoint(point)
+}
+
+func (c *Client) RecordActivePeers(peers []string) {
+	point := influxdb2.NewPoint(
+		"peer_active",
+		c.tags,
+		map[string]any{
+			"id":    c.name,
+			"peers": strings.Join(peers, ","),
+		},
+		time.Now(),
+	)
+
+	log("peer_active")
 	c.writeAPI.WritePoint(point)
 }
