@@ -62,9 +62,11 @@ func (h *QuadraticStorage) Store(w model.Weights) {
 		h.storage[a] = &w
 		h.progressStep()
 	} else if a > h.nextStep {
-		oldW := h.last.Value.(*model.Weights)
-		h.quadraticSteps = append(h.quadraticSteps, oldW.GetAge())
-		h.storage[a] = oldW
+		oldW, ok := h.last.Value.(*model.Weights)
+		if ok {
+			h.quadraticSteps = append(h.quadraticSteps, oldW.GetAge())
+			h.storage[a] = oldW
+		}
 		h.progressStep()
 	}
 
@@ -85,24 +87,23 @@ func (h *QuadraticStorage) Retrieve(min int) (*model.Weights, error) {
 	if h.last.Value == nil {
 		return nil, errors.New("no weigths stored yet")
 	}
+	h.Lock()
+	defer h.Unlock()
 
-	candidate := h.last.Next() // This gives us the oldest update
-	if min >= candidate.Value.(*model.Weights).GetAge() {
+	candidate := h.getOldest()
+	if candidate != nil && min >= candidate.Value.(*model.Weights).GetAge() {
 		// Search in the ring of most recent updates
-		start := candidate
 		for candidate.Value != nil {
 			if candidate.Value.(*model.Weights).GetAge() >= min {
 				return candidate.Value.(*model.Weights), nil
 			}
-			candidate = candidate.Next()
-			if candidate == start {
+			if candidate == h.last {
 				break
 			}
+			candidate = candidate.Next()
 		}
 	}
-	if min <= h.quadraticSteps[len(h.quadraticSteps)-1] {
-		h.Lock()
-		defer h.Unlock()
+	if len(h.quadraticSteps) > 0 && min <= h.quadraticSteps[len(h.quadraticSteps)-1] {
 		// Search in the list of quadratically distanced updates
 		for _, step := range h.quadraticSteps {
 			if step >= min {
@@ -111,6 +112,20 @@ func (h *QuadraticStorage) Retrieve(min int) (*model.Weights, error) {
 		}
 	}
 	return nil, errors.New("no suitable weight found")
+}
+
+// getOldest returns the container of the oldest stored weights, skipping empty
+// places in the ring.
+func (h *QuadraticStorage) getOldest() *ring.Ring {
+	candidate := h.last.Next()
+	start := candidate
+	for _, ok := candidate.Value.(*model.Weights); candidate.Value == nil || !ok; {
+		candidate = candidate.Next()
+		if candidate == start {
+			return nil
+		}
+	}
+	return candidate
 }
 
 func (h *QuadraticStorage) String() string {

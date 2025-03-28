@@ -10,6 +10,8 @@ import (
 func TestPrintQuadraticStorage(t *testing.T) {
 	d := prepareQuadraticStorage()
 	t.Log(d)
+	d = preparePartialQuadraticStorage()
+	t.Log(d)
 }
 
 func TestQuadraticStorageLast(t *testing.T) {
@@ -57,10 +59,43 @@ func TestQuadraticStorageSteps(t *testing.T) {
 	}
 }
 
+func TestPartialQuadraticStorage(t *testing.T) {
+	// prepare
+	d := preparePartialQuadraticStorage()
+	requests := []int{0, 1}
+	expect := []int{0, 1}
+	results := make([]int, 0, len(requests))
+
+	// run
+	for _, a := range requests {
+		results = append(results, retrieve(t, d, a))
+	}
+
+	// verify
+	for i := range len(results) {
+		if results[i] == -1 {
+			continue
+		}
+		if results[i] != expect[i] {
+			t.Errorf("for age %d expected %d, got %d", requests[i], expect[i], results[i])
+		}
+	}
+}
+
 func prepareQuadraticStorage() peer.StorageStrategy {
 	d := peer.NewQuadraticStorage(3, 6)
 
 	for a := range 22 {
+		d.Store(*model.NewWeights(make([]byte, 0), a))
+	}
+
+	return d
+}
+
+func preparePartialQuadraticStorage() peer.StorageStrategy {
+	d := peer.NewQuadraticStorage(3, 6)
+
+	for a := range 3 {
 		d.Store(*model.NewWeights(make([]byte, 0), a))
 	}
 
