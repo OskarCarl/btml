@@ -3,3 +3,6 @@ logs/
 __debug*
 
 *.pb.go
+
+docs/diagrams/*
+!docs/diagrams/*.mmd

@@ -1,0 +1,21 @@
+sequenceDiagram
+    participant Coordinator
+    participant Tracker
+    participant Peer
+    participant InfluxDB
+
+    Peer->>Coordinator: whoami?
+    Coordinator->>Peer: config{}
+
+    Note over Peer: start up Python model
+    Peer-->>InfluxDB: telemetry{peer_online}
+
+    loop len(peers) < 1?
+        Peer->>Tracker: list peers
+        Tracker->>Peer: []peers
+        Note over Peer: wait 5s
+    end
+
+    Note over Peer: select neighbours
+    Peer-->>InfluxDB: telemetry{peer_active}
+    Note over Peer: startup done

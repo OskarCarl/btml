@@ -2,8 +2,16 @@ GOFLAGS ?= -trimpath
 IMAGE ?= btml-model
 DOCKERFLAGS ?= -it --rm -v ./:/app -w /app --user $(shell id -u):$(shell id -g)
 PROTOBUFS = internal/model/peer-model.pb.go internal/peer/model-update.pb.go
+DIAGRAMS_FORMAT ?= pdf
+DIAGRAMS = $(patsubst %.mmd,%.$(DIAGRAMS_FORMAT),$(wildcard docs/diagrams/*.mmd))
 
 all: bin/test-model bin/tracker bin/peer
+
+all-diagrams: $(DIAGRAMS)
+
+$(DIAGRAMS): %.$(DIAGRAMS_FORMAT):%.mmd
+	docker run --rm -u $(shell id -u):$(shell id -g) -v ./docs/diagrams:/data ghcr.io/mermaid-js/mermaid-cli/mermaid-cli \
+	-t neutral -b transparent -f -e $(DIAGRAMS_FORMAT) -i $(notdir $(@:.$(DIAGRAMS_FORMAT)=.mmd)) -o $(notdir $@)
 
 test-model: bin/test-model
 	@$(MAKE) -C model/ test-reqs
@@ -45,6 +53,7 @@ prep-kernel:
 
 clean:
 	rm -rf bin/ logs/
+	rm -f docs/diagrams/*.{pdf,png,svg}
 	@$(MAKE) -C model/ clean
 
 reset:

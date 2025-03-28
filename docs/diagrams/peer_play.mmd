@@ -1,0 +1,25 @@
+sequenceDiagram
+    participant Tracker
+    participant Peer
+    participant Swarm
+    participant InfluxDB
+
+    par Maintenance
+        loop 30s
+            Peer->>Tracker: list peers
+            Tracker->>Peer: []peers
+            Note over Peer: select neighbours
+            Peer-->>InfluxDB: telemetry{peer_active}
+        end
+    and Play
+        loop
+            alt Train
+                Note over Peer: train model
+                Peer-->>InfluxDB: telemetry{model_training}
+                Peer->>Swarm: update
+                Peer-->>InfluxDB: telemetry{peer_send}
+            else Wait
+                Note over Peer: wait [0-30s]
+            end
+        end
+    end
