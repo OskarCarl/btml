@@ -44,10 +44,8 @@ func Start(c *Config, m *model.Model, t *telemetry.Client) *Me {
 // WaitReady waits until we get at least one peer from the tracker. It adds up
 // to 5 peers to the peer set.
 func (me *Me) WaitReady() {
-	for len(me.tracker.Peers.List) < 1 {
+	for len(me.peerset.Active) < 1 {
 		time.Sleep(time.Second * 2)
 	}
-	me.UpdatePeerset()
-	me.pss.Select(me)
 	slog.Info("Starting local play")
 }

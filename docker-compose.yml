@@ -36,8 +36,6 @@ services:
     build:
       context: .
       dockerfile: ./docker/tracker.dockerfile
-    ports:
-      - "8080:8080"
     volumes:
       - ./config/tracker:/config
     depends_on:

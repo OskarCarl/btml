@@ -17,9 +17,13 @@ func (me *Me) MaintenanceLoop() {
 			return
 		case <-timer.C:
 			me.UpdatePeerset()
-			me.pss.Select(me)
-			me.sendTelemetry()
-			timer.Reset(wait)
+			if len(me.tracker.Peers.List) > 0 {
+				me.pss.Select(me)
+				me.sendTelemetry()
+				timer.Reset(wait)
+			} else {
+				timer.Reset(time.Duration(time.Second * 5))
+			}
 		}
 	}
 }
