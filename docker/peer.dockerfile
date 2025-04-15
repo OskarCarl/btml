@@ -18,7 +18,7 @@ ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 RUN apt-get update && apt-get install -y protobuf-compiler protoc-gen-go
 
 COPY protocols/ /workspace/protocols
-RUN protoc --go_out=. -Iprotocols/ peer-model.proto
+RUN protoc --go_out=. -Iprotocols/ model-update.proto peer-model.proto
 
 COPY ["go.mod", "go.sum", "./"]
 RUN go mod download

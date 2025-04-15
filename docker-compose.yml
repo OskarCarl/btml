@@ -49,6 +49,14 @@ services:
     build:
       context: .
       dockerfile: ./docker/peer.dockerfile
+    ## Uncomment to use Nvidia GPUs
+    # deploy:
+    #   resources:
+    #      reservations:
+    #        devices:
+    #          - driver: nvidia
+    #            count: 2
+    #            capabilities: [gpu]
     scale: 10
     command:
       [
