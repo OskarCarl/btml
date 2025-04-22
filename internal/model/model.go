@@ -1,6 +1,7 @@
 package model
 
 import (
+	"bufio"
 	"fmt"
 	"log/slog"
 	"net"
@@ -16,6 +17,7 @@ import (
 
 // Model represents a model instance. All actions are executed in series.
 type Model struct {
+	checkpointBase        string
 	client                *ModelClient
 	age                   int
 	lastEval              int
@@ -33,9 +35,10 @@ func (m *Model) Shutdown() {
 // Eval evaluates the model and logs the results. It blocks until other
 // operations are completed.
 func (m *Model) Eval() error {
+	checkpointPath := fmt.Sprintf("%s/%d", m.checkpointBase, m.age)
 	m.Lock()
 	defer m.Unlock()
-	met, err := m.client.Eval()
+	met, err := m.client.Eval(checkpointPath)
 	if err != nil {
 		return fmt.Errorf("failed to evaluate model: %w", err)
 	}
@@ -141,6 +144,13 @@ func NewModel(c *Config, telemetry *telemetry.Client) (*Model, error) {
 		}
 	}
 	cmd := exec.Command(c.PythonRuntime, args...)
+	stdout, _ := cmd.StderrPipe()
+	scanner := bufio.NewScanner(stdout)
+	go func() {
+		for scanner.Scan() {
+			slog.Error("Model error", "text", scanner.Text())
+		}
+	}()
 	cmd.Dir = c.ModelPath
 	return &Model{
 		client: &ModelClient{
@@ -148,6 +158,7 @@ func NewModel(c *Config, telemetry *telemetry.Client) (*Model, error) {
 			socketPath: socketPath,
 		},
 		age:                   1,
+		checkpointBase:        c.GetCheckpointPath(),
 		modelModifiedCallback: nil,
 		telemetry:             telemetry,
 	}, nil

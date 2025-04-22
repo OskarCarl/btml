@@ -3,11 +3,13 @@
 import argparse
 import sys
 import logging
+from torch import load
 
 from communication import ModelServer
 from config import DEVICE, BATCH_SIZE, EPOCHS
 from data import create_data_loader, print_data_shape
 from training import Model
+from evaluate_imported import evaluate
 
 
 def _oneshot(model: Model):
@@ -40,7 +42,7 @@ def setup_logging(log_file: str | None):
 def main():
     parser = argparse.ArgumentParser(
         description="Small neural network for fMNIST")
-    parser.add_argument("--train-data", type=str, required=True,
+    parser.add_argument("--train-data", type=str,
                         help="Path to training data file (.pt)")
     parser.add_argument("--test-data", type=str, required=True,
                         help="Path to test data file (.pt)")
@@ -50,11 +52,21 @@ def main():
                         help="Only train once and exit")
     parser.add_argument("--log-file", type=str,
                         help="Path to log file (if not specified, logs to stdout only)")
+    parser.add_argument("--weights", type=str,
+                        help="Path to the saved model weights file (.pt or .pth)")
+    parser.add_argument("--evaluate", action='store_true',
+                        help="Evaluate the model and exit")
+    parser.add_argument("--limit", type=int, default=20,
+                        help="Limit the number of results to display in evaluation mode (default: 20, 0 for all)")
     args = parser.parse_args()
+
+    if (not args.train_data and not args.evaluate):
+        logging.error("You need to either provide train data or enable evaluation mode")
+        sys.exit(2)
 
     if args.oneshot and args.socket:
         logging.error("Cannot use --oneshot and --socket together")
-        sys.exit(2)
+        sys.exit(3)
 
     # Setup logging
     setup_logging(args.log_file)
@@ -66,7 +78,12 @@ def main():
     print_data_shape(test_dataloader)
 
     model = Model(train_dataloader, test_dataloader)
-    if args.socket:
+    if args.weights:
+        model.model.load_state_dict(load(args.weights, weights_only=True))
+    if args.evaluate:
+        evaluate(model, args.limit)
+        logging.info("Done!")
+    elif args.socket:
         server = ModelServer(model, args.socket)
         logging.info(f"Starting server on {args.socket}")
         server.start()
@@ -75,7 +92,7 @@ def main():
         logging.info("Done!")
     else:
         logging.error("No action specified")
-        sys.exit(3)
+        sys.exit(4)
 
 
 if __name__ == "__main__":

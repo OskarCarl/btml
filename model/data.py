@@ -18,12 +18,15 @@ class PreparedFashionMNIST(TensorDataset):
         return self.data[idx], self.labels[idx]
 
 
-def create_data_loader(batch_size: int, train_path: str, test_path: str) -> tuple[DataLoader, DataLoader]:
+def create_data_loader(batch_size: int, train_path: str, test_path: str) -> tuple[DataLoader|None, DataLoader]:
     logging.info(f"Loading data from {train_path} and {test_path}")
-    training_data, test_data = PreparedFashionMNIST(
-        train_path), PreparedFashionMNIST(test_path)
-    train_dataloader = DataLoader(
-        training_data, batch_size=batch_size, shuffle=True)
+    if train_path:
+        training_data = PreparedFashionMNIST(train_path)
+        train_dataloader = DataLoader(
+            training_data, batch_size=batch_size, shuffle=True)
+    else:
+        train_dataloader = None
+    test_data = PreparedFashionMNIST(test_path)
     test_dataloader = DataLoader(
         test_data, batch_size=batch_size, shuffle=True)
     return train_dataloader, test_dataloader

@@ -49,10 +49,12 @@ func (c *ModelClient) Train() (*Metrics, error) {
 	return NewMetrics(-1, res.Loss)
 }
 
-func (c *ModelClient) Eval() (*Metrics, error) {
+func (c *ModelClient) Eval(checkpointPath string) (*Metrics, error) {
 	req := &ModelRequest{
 		Request: &ModelRequest_Eval{
-			Eval: &EvalRequest{},
+			Eval: &EvalRequest{
+				Path: checkpointPath,
+			},
 		},
 	}
 

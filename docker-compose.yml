@@ -67,12 +67,12 @@ services:
         "-model",
         "/app/model",
         "-datapath",
-        "/data/prepared",
+        "/data",
         "-logpath",
         "/logs",
       ]
     volumes:
-      - ./model/data:/data:ro
+      - ./model/data:/data:rw
       - ./model/logs:/logs:rw
     depends_on:
       - tracker
@@ -80,7 +80,7 @@ services:
     networks:
       - backend
     environment:
-      LOG_LEVEL: DEBUG
+      LOG_LEVEL: WARN
 
 volumes:
   influxdb-data:

@@ -2,6 +2,7 @@ import logging
 import io
 import os
 import socket
+import pathlib
 
 import betterproto
 import torch
@@ -105,6 +106,12 @@ class ModelServer:
                     response.accuracy = accuracy
                     response.loss = loss
                     response.success = True
+                    # Save model weights to disk after evaluation
+                    if values.path:
+                        model_path = f"{values.path}.pt"
+                        pathlib.Path(model_path).parent.mkdir(parents=True, exist_ok=True)
+                        torch.save(self.model.export_model_weights(), model_path)
+                        logging.info(f"Saved model checkpoint to {model_path}")
 
             # Send response with length prefix
             response_data = bytes(response)

@@ -29,10 +29,10 @@ class Model:
     model: NeuralNetwork
     loss_fn: nn.CrossEntropyLoss
     optimizer: torch.optim.SGD
-    train_dataloader: DataLoader
+    train_dataloader: DataLoader|None
     test_dataloader: DataLoader
 
-    def __init__(self, train_dataloader: DataLoader, test_dataloader: DataLoader):
+    def __init__(self, train_dataloader: DataLoader|None, test_dataloader: DataLoader):
         self.model = NeuralNetwork().to(DEVICE)
         logging.info("Initialized new model")
 
@@ -51,6 +51,7 @@ class Model:
         Returns:
             float: The average loss over all batches
         """
+        assert self.train_dataloader is not None, "train_dataloader is None"
         size = len(self.train_dataloader.dataset)  # type: ignore
         losses = []
         self.model.train()

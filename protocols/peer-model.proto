@@ -23,7 +23,9 @@ message ImportWeightsRequest {
 
 message TrainRequest {}
 
-message EvalRequest {}
+message EvalRequest {
+  string path = 1;
+}
 
 // Response message from the model
 message ModelResponse {
