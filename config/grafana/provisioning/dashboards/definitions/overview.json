@@ -61,8 +61,7 @@
 						"mode": "absolute",
 						"steps": [
 							{
-								"color": "green",
-								"value": null
+								"color": "green"
 							}
 						]
 					}
@@ -129,7 +128,7 @@
 					"sort": "none"
 				}
 			},
-			"pluginVersion": "11.5.2",
+			"pluginVersion": "11.6.0",
 			"targets": [
 				{
 					"alias": "",
@@ -139,7 +138,7 @@
 					"measurement": "model_training",
 					"orderByTime": "ASC",
 					"policy": "$run",
-					"query": "SELECT \"loss\",\"age\",\"peer_id\" FROM \"$run\".\"autogen\".\"model_training\" WHERE $timeFilter AND peer_id =~ /${peers:regex}/",
+					"query": "SELECT \"loss\",\"age\",\"peer_id\" FROM \"$run\".\"autogen\".\"model_training\" WHERE $timeFilter AND peer_id =~ /^${peers:regex}$/",
 					"rawQuery": true,
 					"refId": "A",
 					"resultFormat": "time_series",
@@ -221,8 +220,7 @@
 						"mode": "absolute",
 						"steps": [
 							{
-								"color": "green",
-								"value": null
+								"color": "green"
 							}
 						]
 					}
@@ -266,7 +264,7 @@
 					"sort": "none"
 				}
 			},
-			"pluginVersion": "11.5.2",
+			"pluginVersion": "11.6.0",
 			"targets": [
 				{
 					"datasource": "InfluxDB",
@@ -275,7 +273,7 @@
 					"measurement": "model_training",
 					"orderByTime": "ASC",
 					"policy": "$run",
-					"query": "SELECT \"loss\",\"age\",\"peer_id\" FROM \"$run\".\"autogen\".\"model_evaluation\" WHERE $timeFilter AND peer_id =~ /${peers:regex}/",
+					"query": "SELECT \"loss\",\"age\",\"peer_id\" FROM \"$run\".\"autogen\".\"model_evaluation\" WHERE $timeFilter AND peer_id =~ /^${peers:regex}$/",
 					"rawQuery": true,
 					"refId": "A",
 					"resultFormat": "time_series",
@@ -345,7 +343,7 @@
 				},
 				"zoomMode": "cooperative"
 			},
-			"pluginVersion": "11.5.2",
+			"pluginVersion": "11.6.0",
 			"targets": [
 				{
 					"alias": "",
@@ -354,7 +352,7 @@
 						"uid": "P951FEA4DE68E13C5"
 					},
 					"hide": false,
-					"query": "SELECT \"id\", LAST(\"age\") FROM \"$run\".\"autogen\".\"peer_online\" WHERE peer_id =~ /${peers:regex}/ GROUP BY peer_id",
+					"query": "SELECT \"id\", LAST(\"age\") FROM \"$run\".\"autogen\".\"peer_online\"  GROUP BY peer_id",
 					"rawQuery": true,
 					"refId": "nodes",
 					"resultFormat": "table"
@@ -366,7 +364,7 @@
 						"uid": "P951FEA4DE68E13C5"
 					},
 					"hide": false,
-					"query": "SELECT \"source\", \"target\"\nFROM \"$run\".\"autogen\".\"peer_send\"\nWHERE $timeFilter\nAND peer_id =~ /${peers:regex}/\nGROUP BY peer_id\n",
+					"query": "SELECT \"source\", \"target\"\nFROM \"$run\".\"autogen\".\"peer_send\"\nWHERE $timeFilter\nAND peer_id =~ /^${peers:regex}$/\nGROUP BY peer_id\n",
 					"rawQuery": true,
 					"refId": "edges",
 					"resultFormat": "table"
@@ -458,8 +456,7 @@
 						"mode": "absolute",
 						"steps": [
 							{
-								"color": "green",
-								"value": null
+								"color": "green"
 							}
 						]
 					}
@@ -516,7 +513,7 @@
 					"sort": "none"
 				}
 			},
-			"pluginVersion": "11.5.2",
+			"pluginVersion": "11.6.0",
 			"targets": [
 				{
 					"datasource": "InfluxDB",
@@ -525,7 +522,7 @@
 					"measurement": "model_training",
 					"orderByTime": "ASC",
 					"policy": "$run",
-					"query": "SELECT \"accuracy\",\"age\",\"peer_id\" FROM \"$run\".\"autogen\".\"model_evaluation\" WHERE $timeFilter AND peer_id =~ /${peers:regex}/",
+					"query": "SELECT \"accuracy\",\"age\",\"peer_id\" FROM \"$run\".\"autogen\".\"model_evaluation\" WHERE $timeFilter AND peer_id =~ /^${peers:regex}$/",
 					"rawQuery": true,
 					"refId": "A",
 					"resultFormat": "time_series",
@@ -591,8 +588,7 @@
 						"mode": "absolute",
 						"steps": [
 							{
-								"color": "green",
-								"value": null
+								"color": "green"
 							},
 							{
 								"color": "red",
@@ -622,14 +618,14 @@
 				"showHeader": true,
 				"sortBy": []
 			},
-			"pluginVersion": "11.5.2",
+			"pluginVersion": "11.6.0",
 			"targets": [
 				{
 					"datasource": {
 						"type": "influxdb",
 						"uid": "P951FEA4DE68E13C5"
 					},
-					"query": "SELECT LAST(\"peers\") FROM \"$run\".\"autogen\".\"peer_active\" WHERE $timeFilter GROUP BY peer_id",
+					"query": "SELECT LAST(\"peers\") FROM \"$run\".\"autogen\".\"peer_active\" WHERE $timeFilter AND peer_id =~ /^${peers:regex}$/ GROUP BY peer_id",
 					"rawQuery": true,
 					"refId": "A",
 					"resultFormat": "table"
@@ -658,7 +654,7 @@
 	],
 	"preload": false,
 	"refresh": "5s",
-	"schemaVersion": 40,
+	"schemaVersion": 41,
 	"tags": [],
 	"templating": {
 		"list": [
@@ -718,6 +714,5 @@
 	"timezone": "browser",
 	"title": "Overview",
 	"uid": "deftllcm0xr7ka",
-	"version": 11,
-	"weekStart": ""
+	"version": 1
 }
