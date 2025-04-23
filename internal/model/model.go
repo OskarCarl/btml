@@ -44,7 +44,7 @@ func (m *Model) Eval() error {
 	}
 	slog.Info("Evaluated model", "accuracy", met.acc, "loss", met.loss)
 	if m.telemetry != nil {
-		go m.telemetry.RecordEvaluation(met.acc, met.loss, m.age)
+		go m.telemetry.RecordEvaluation(met.acc, met.loss, met.guesses, m.age)
 	}
 	return nil
 }

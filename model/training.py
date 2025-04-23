@@ -3,6 +3,7 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from typing import Dict, Any
+from numpy import array, unique, concatenate
 
 from config import DEVICE, LEARNING_RATE
 
@@ -73,7 +74,7 @@ class Model:
                 losses += [loss]
         return sum(losses)/len(losses)
 
-    def test(self) -> tuple[float, float]:
+    def test(self) -> tuple[float, float, Dict[int, float]]:
         """
         Evaluates the model.
 
@@ -85,17 +86,21 @@ class Model:
         num_batches = len(self.test_dataloader)
         self.model.eval()
         test_loss, correct = 0, 0
+        pred_labels = array([], dtype=int)
         with torch.no_grad():
             for X, y in self.test_dataloader:
                 X, y = X.to(DEVICE), y.to(DEVICE)
                 pred = self.model(X)
                 test_loss += self.loss_fn(pred, y).item()
                 correct += (pred.argmax(1) == y).type(torch.float).sum().item()
+                pred_labels = concatenate((pred_labels, pred.argmax(1).numpy().astype(int)))
+        pred_labels, pred_counts = unique(pred_labels, return_counts=True)
+        guesses = {label: pred_counts[i]/size for i, label in enumerate(pred_labels) if pred_counts[i] > size/13}
         test_loss /= num_batches
         correct /= size
         logging.info(
             f"Test Error: Accuracy: {correct:>0.4f}, Avg loss: {test_loss:>8f}")
-        return correct, test_loss
+        return correct, test_loss, guesses
 
     def export_model_weights(self) -> Dict[str, Any]:
         """Export model weights as a state dict."""

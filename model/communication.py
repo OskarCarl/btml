@@ -102,9 +102,10 @@ class ModelServer:
                 case "eval":
                     _ack()
                     logging.info("Evaluating model")
-                    accuracy, loss = self.model.test()
+                    accuracy, loss, guesses = self.model.test()
                     response.accuracy = accuracy
                     response.loss = loss
+                    response.guesses = guesses
                     response.success = True
                     # Save model weights to disk after evaluation
                     if values.path:

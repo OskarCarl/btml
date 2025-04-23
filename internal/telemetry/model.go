@@ -21,13 +21,14 @@ func (c *Client) RecordTraining(loss float32, age int) {
 	c.writeAPI.WritePoint(point)
 }
 
-func (c *Client) RecordEvaluation(accuracy, loss float32, age int) {
 	point := influxdb2.NewPoint(
+func (c *Client) RecordEvaluation(accuracy, loss float32, guesses map[int32]float32, age int) {
 		"model_evaluation",
 		c.tags,
 		map[string]any{
 			"accuracy": accuracy,
 			"loss":     loss,
+			"guesses":  guesses,
 			"age":      age,
 		},
 		time.Now(),

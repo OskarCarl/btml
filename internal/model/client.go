@@ -46,7 +46,7 @@ func (c *ModelClient) Train() (*Metrics, error) {
 	if err != nil {
 		return nil, fmt.Errorf("train request failed: %w", err)
 	}
-	return NewMetrics(-1, res.Loss)
+	return NewMetrics(-1, res.Loss, nil)
 }
 
 func (c *ModelClient) Eval(checkpointPath string) (*Metrics, error) {
@@ -67,7 +67,7 @@ func (c *ModelClient) Eval(checkpointPath string) (*Metrics, error) {
 	if err != nil {
 		return nil, fmt.Errorf("eval request failed: %w", err)
 	}
-	return NewMetrics(res.Accuracy, res.Loss)
+	return NewMetrics(res.Accuracy, res.Loss, res.Guesses)
 }
 
 func (c *ModelClient) Apply(weights *Weights, ratio float32) error {

@@ -34,4 +34,5 @@ message ModelResponse {
   bytes weights = 3;  // Only set for export_weights response
   float loss = 4;  // Only set for train and eval
   float accuracy = 5;  // Only set for eval
+  map<int32, float> guesses = 6;  // Only set for eval
 }

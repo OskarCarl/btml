@@ -6,7 +6,7 @@ DOCKER_GPU_VERSION_OVERRIDE ?= -e HSA_OVERRIDE_GFX_VERSION="11.0.1"
 DOCKER_GPUFLAGS ?= $(DOCKER_GPU_VERSION_OVERRIDE) --device=/dev/kfd:rw --device=/dev/dri --security-opt seccomp=unconfined --group-add video
 
 PEER_ID ?= 0
-MODEL_CMDLINE ?= --train-data data/prepared/fMNIST_train_split_$(PEER_ID).pt --test-data data/prepared/fMNIST_test_split_$(PEER_ID).pt
+MODEL_CMDLINE ?= --oneshot --train-data data/prepared/fMNIST_train_split_$(PEER_ID).pt --test-data data/prepared/fMNIST_test_split_$(PEER_ID).pt
 
 test: test-reqs
 	$(MAKE) docker-run-cpu MODEL_CMDLINE="$(MODEL_CMDLINE) --oneshot"
@@ -47,5 +47,6 @@ clean:
 reset:
 	rm -f logs/*.log
 	rm -f logs/*.done
+	rm -rf data/checkpoints/*
 
 .PHONY: run docker-run-cpu docker-run-amd docker-prepare-data clean reset

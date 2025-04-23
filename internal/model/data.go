@@ -28,12 +28,14 @@ func NewWeights(data []byte, age int) *Weights {
 type Metrics struct {
 	acc, loss float32
 	age       int
+	guesses   map[int32]float32
 }
 
-func NewMetrics(acc, loss float32) (*Metrics, error) {
+func NewMetrics(acc, loss float32, guesses map[int32]float32) (*Metrics, error) {
 	return &Metrics{
-		acc:  acc,
-		loss: loss,
+		acc:     acc,
+		loss:    loss,
+		guesses: guesses,
 	}, nil
 }
 
