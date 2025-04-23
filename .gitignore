@@ -6,3 +6,5 @@ __debug*
 
 docs/diagrams/*
 !docs/diagrams/*.mmd
+
+docker-compose.override.yml

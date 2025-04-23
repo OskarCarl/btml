@@ -1,0 +1,3 @@
+services:
+  peer:
+    user: 1000:1000
