@@ -7,117 +7,101 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
+	"path"
 	"time"
-
-	"github.com/vs-ude/btml/internal/structs"
 )
 
-// InitConf creates a new bucket and exchanges the admin token from the config for
-// a write-only token that will be used to send telemetry data. It replaces the
-// values in the Metrics struct for the actual IDs and the write token.
-func InitConf(c *structs.TelemetryConf) error {
-	if err := getOrgID(c); err != nil {
-		return fmt.Errorf("failed to get org ID: %w", err)
+func InitConf(tc *TelemetryConf, gc *GrafanaConf, configPath string) error {
+	tc.Suffix = time.Now().Format("2006_01_02_15_04_05")
+	if err := getAdminToken(tc, configPath); err != nil {
+		return fmt.Errorf("failed to get admin token: %w", err)
 	}
-	name := fmt.Sprintf("btml-%s", time.Now().Format("2006-01-02-15-04-05"))
-	if err := createBucket(c, name); err != nil {
-		return fmt.Errorf("failed to create bucket: %w", err)
+	if err := storeSuffix(tc); err != nil {
+		return fmt.Errorf("failed to store the run suffix: %w", err)
 	}
-	if err := writeBucketName(c, name); err != nil {
-		return fmt.Errorf("failed to write bucket name: %w", err)
-	}
-	if err := tradeToken(c); err != nil {
-		return fmt.Errorf("failed to trade token: %w", err)
+	if err := provisionGrafanaDatasource(gc, tc); err != nil {
+		return fmt.Errorf("failed to provision Grafana datasource: %w", err)
 	}
 	return nil
 }
 
-func getOrgID(c *structs.TelemetryConf) error {
-	// Setup
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/v2/orgs?org=%s", c.URL, c.Org), nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Authorization", fmt.Sprintf("Token %s", c.Token))
-	slog.Debug("Sending org list request to InfluxDB")
+func getAdminToken(c *TelemetryConf, configPath string) error {
+	var tokenFile string
+	// Check if admin token already exists on disk
+	if configPath != "" {
+		dir := path.Dir(configPath)
+		tokenFile = path.Join(dir, ".token")
 
-	// Execute
+		tokenBytes, err := os.ReadFile(tokenFile)
+		if err == nil && len(tokenBytes) > 0 {
+			c.Token = string(tokenBytes)
+			slog.Debug("Using existing admin token from disk", "path", tokenFile)
+			// Check if the token is still valid
+			healthReq, err := setupInfluxPostRequest(c, "configure/database?format=csv")
+			if err == nil {
+				healthReq.Method = "GET"
+				healthResp, err := http.DefaultClient.Do(healthReq)
+				if err == nil && healthResp.StatusCode == http.StatusOK {
+					slog.Debug("Token validated with health check")
+					return nil
+				}
+				if healthResp != nil {
+					healthResp.Body.Close()
+				}
+				slog.Debug("Existing token failed health check, will request new token")
+			}
+		}
+	}
+
+	req, err := setupInfluxPostRequest(c, "configure/token/admin")
+	if err != nil {
+		return fmt.Errorf("failed to create admin token request: %w", err)
+	}
+
 	resp, err := execRequest(req, nil)
 	if err != nil {
-		return err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code: %s", resp.Status)
+		return fmt.Errorf("failed to get admin token: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// Decode
-	var orgsInfo struct {
-		Orgs []struct {
-			ID   string `json:"id"`
-			Name string `json:"name"`
-		} `json:"orgs"`
+	if resp.StatusCode != http.StatusCreated {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("unexpected status code for admin token: %s, body: %s", resp.Status, string(bodyBytes))
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&orgsInfo); err != nil {
-		return fmt.Errorf("failed to decode response: %w", err)
+
+	var tokenResp struct {
+		Token string `json:"token"`
 	}
-	slog.Debug("Received org list response from InfluxDB", "orgs", orgsInfo)
-	if len(orgsInfo.Orgs) == 0 {
-		return fmt.Errorf("no orgs found")
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
+		return fmt.Errorf("failed to decode token response: %w", err)
 	}
-	c.Org = orgsInfo.Orgs[0].ID
+
+	c.Token = tokenResp.Token
+	slog.Debug("Successfully obtained admin token")
+
+	// Store the admin token to disk for persistence
+	if tokenFile != "" {
+		err := os.WriteFile(tokenFile, []byte(c.Token), 0666)
+		if err != nil {
+			slog.Warn("Failed to write admin token to disk", "error", err, "path", tokenFile)
+		} else {
+			slog.Debug("Admin token saved to disk", "path", tokenFile)
+		}
+	}
 	return nil
 }
 
-func createBucket(c *structs.TelemetryConf, name string) error {
-	// Setup
-	req, err := setupPostRequest(c, "/buckets")
+// storeSuffix saves the suffix of the upcoming run to the runs table. This
+// has the side effect of creating the DB if it doesn't exist yet.
+func storeSuffix(c *TelemetryConf) error {
+	req, err := setupInfluxPostRequest(c, fmt.Sprintf("write_lp?db=%s&precision=second", c.DB))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
-	body := bytes.NewBuffer([]byte{})
-	err = json.Compact(body, fmt.Appendf(nil, `{
-			"orgID": "%s",
-			"name": "%s"
-		}`, c.Org, name))
-	if err != nil {
-		return err
-	}
-	slog.Debug("Sending bucket create request to InfluxDB", "body", body.String())
+	req.Header.Set("Content-Type", "text/plain; charset=utf-8")
+	body := bytes.NewBuffer(fmt.Appendf(nil, "runs run=\"%s\"", c.Suffix))
 
-	// Execute
-	resp, err := execRequest(req, body)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("unexpected status code: %s", resp.Status)
-	}
-
-	// Decode
-	var bucket struct {
-		ID   string `json:"id"`
-		Name string `json:"name"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&bucket); err != nil {
-		return fmt.Errorf("failed to decode response: %w", err)
-	}
-	c.Bucket = bucket.ID
-	slog.Debug("Received bucket response from InfluxDB", "bucket", bucket)
-	return nil
-}
-
-func writeBucketName(c *structs.TelemetryConf, name string) error {
-	// Setup
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/api/v2/write?bucket=%s&org=%s", c.URL, "default", c.Org), nil)
-	if err == nil {
-		req.Header.Set("Authorization", fmt.Sprintf("Token %s", c.Token))
-		req.Header.Set("Content-Type", "text/plain; charset=utf-8")
-	}
-	body := bytes.NewBuffer(fmt.Appendf(nil, "runs run=\"%s\"", name))
-
-	// Execute
 	resp, err := execRequest(req, body)
 	if err != nil {
 		return err
@@ -127,63 +111,106 @@ func writeBucketName(c *structs.TelemetryConf, name string) error {
 		return fmt.Errorf("unexpected status code: %s", resp.Status)
 	}
 
-	slog.Debug("Stored bucket/run name in InfluxDB", "bucket", name)
+	slog.Debug("Stored run suffix in InfluxDB", "run", c.Suffix)
 	return nil
 }
 
-func tradeToken(c *structs.TelemetryConf) error {
-	// Setup
-	req, err := setupPostRequest(c, "/authorizations")
-	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
+func provisionGrafanaDatasource(c *GrafanaConf, tc *TelemetryConf) error {
+	// Get the datasource uid
+	createRequest := func(endpoint string) (*http.Request, error) {
+		req, err := http.NewRequest("GET", fmt.Sprintf("%s/api/%s", c.URL, endpoint), nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+		req.SetBasicAuth(c.User, c.Passwd)
+		req.Header.Set("Content-Type", "application/json")
+		return req, nil
 	}
-	body := bytes.NewBuffer([]byte{})
-	err = json.Compact(body, fmt.Appendf(nil, `{
-			"status": "active",
-			"description": "Autogenerated BTML telemetry token",
-			"orgID": "%s",
-			"permissions": [
-				{
-					"action": "write",
-					"resource": {
-						"orgID": "%s",
-						"type": "buckets",
-						"name": "%s"
-					}
-				}
-			]
-		}`, c.Org, c.Org, c.Bucket))
-	if err != nil {
-		return err
-	}
-	slog.Debug("Sending token create request to InfluxDB", "body", body.String())
 
-	// Execute
-	resp, err := execRequest(req, body)
+	req, err := createRequest("datasources/name/InfluxDB")
 	if err != nil {
 		return err
+	}
+
+	resp, err := execRequest(req, nil)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusCreated {
+
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected status code: %s", resp.Status)
 	}
 
-	// Decode
-	var tokenInfo struct {
-		Token string `json:"token"`
+	var datasource struct {
+		Uid string `json:"uid"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&tokenInfo); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&datasource); err != nil {
 		return fmt.Errorf("failed to decode response: %w", err)
 	}
-	c.Token = tokenInfo.Token
-	slog.Debug("Received token response from InfluxDB", "token", tokenInfo.Token)
+
+	slog.Debug("Retrieved Grafana datasource info", "uid", datasource.Uid)
+
+	// Get the current datasource configuration
+	req, err = createRequest(fmt.Sprintf("datasources/uid/%s", datasource.Uid))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err = execRequest(req, nil)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: %s", resp.Status)
+	}
+
+	var data map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	// Update the datasource with the token
+	req, err = createRequest(fmt.Sprintf("datasources/uid/%s", datasource.Uid))
+	if err != nil {
+		return fmt.Errorf("failed to create update request: %w", err)
+	}
+	req.Method = "PUT"
+
+	data["database"] = tc.Suffix
+	data["secureJsonData"] = map[string]any{
+		"token": tc.Token,
+	}
+	delete(data, "secureJsonFields")
+	d, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("failed to marshal JSON: %w", err)
+	}
+	updateBody := bytes.NewBuffer(d)
+
+	slog.Debug("Updating Grafana datasource with token", "uid", datasource.Uid)
+
+	resp, err = execRequest(req, updateBody)
+	if err != nil {
+		return fmt.Errorf("failed to send update request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("unexpected status code updating datasource: %s, body: %s", resp.Status, string(bodyBytes))
+	}
+
+	slog.Debug("Successfully updated Grafana datasource with token")
 	return nil
 }
 
-func setupPostRequest(c *structs.TelemetryConf, p string) (*http.Request, error) {
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/api/v2%s", c.URL, p), nil)
+func setupInfluxPostRequest(c *TelemetryConf, p string) (*http.Request, error) {
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s/api/v3/%s", c.URL, p), nil)
 	if err == nil {
-		req.Header.Set("Authorization", fmt.Sprintf("Token %s", c.Token))
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.Token))
 		req.Header.Set("Content-Type", "application/json")
 	}
 	return req, err

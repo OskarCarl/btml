@@ -1,18 +1,17 @@
 services:
   influx:
-    image: influxdb:2
+    image: quay.io/influxdb/influxdb3-core:latest
+    command:
+      - serve
+      - --node-id=node0
+      - --object-store=file
+      - --data-dir=/var/lib/influxdb3
     ports:
-      - "8086:8086"
+      - "8181:8181"
     environment:
-      INFLUXD_LOG_LEVEL: error
-      DOCKER_INFLUXDB_INIT_MODE: setup
-      DOCKER_INFLUXDB_INIT_USERNAME: user
-      DOCKER_INFLUXDB_INIT_PASSWORD: password
-      DOCKER_INFLUXDB_INIT_ORG: default
-      DOCKER_INFLUXDB_INIT_BUCKET: default
-      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: my-super-secret-admin-token
+      LOG_FILTER: error
     volumes:
-      - influxdb-data:/var/lib/influxdb2
+      - influxdb-data:/var/lib/influxdb3
     networks:
       - backend
 
@@ -21,6 +20,7 @@ services:
     ports:
       - "3000:3000"
     environment:
+      GF_DISABLE_INITIAL_ADMIN_CREATION: "true"
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
       GF_LOG_LEVEL: warn
@@ -40,6 +40,7 @@ services:
       - ./config/tracker:/config
     depends_on:
       - influx
+      - grafana
     networks:
       - backend
     environment:

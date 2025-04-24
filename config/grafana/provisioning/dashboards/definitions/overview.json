@@ -44,10 +44,10 @@
 						"lineStyle": {
 							"fill": "solid"
 						},
-						"lineWidth": 3,
+						"lineWidth": 2,
 						"pointShape": "circle",
 						"pointSize": {
-							"fixed": 27
+							"fixed": 2
 						},
 						"pointStrokeWidth": 1,
 						"scaleDistribution": {
@@ -61,35 +61,13 @@
 						"mode": "absolute",
 						"steps": [
 							{
-								"color": "green"
+								"color": "green",
+								"value": null
 							}
 						]
 					}
 				},
-				"overrides": [
-					{
-						"__systemRef": "hideSeriesFrom",
-						"matcher": {
-							"id": "byNames",
-							"options": {
-								"mode": "exclude",
-								"names": ["loss"],
-								"prefix": "All except:",
-								"readOnly": true
-							}
-						},
-						"properties": [
-							{
-								"id": "custom.hideFrom",
-								"value": {
-									"legend": false,
-									"tooltip": false,
-									"viz": true
-								}
-							}
-						]
-					}
-				]
+				"overrides": []
 			},
 			"gridPos": {
 				"h": 8,
@@ -103,7 +81,9 @@
 					"calcs": ["lastNotNull"],
 					"displayMode": "table",
 					"placement": "right",
-					"showLegend": true
+					"showLegend": true,
+					"sortBy": "Name",
+					"sortDesc": false
 				},
 				"mapping": "auto",
 				"series": [
@@ -111,13 +91,13 @@
 						"x": {
 							"matcher": {
 								"id": "byName",
-								"options": "model_training.age"
+								"options": "age"
 							}
 						},
 						"y": {
 							"matcher": {
 								"id": "byName",
-								"options": "model_training.loss"
+								"options": "loss"
 							}
 						}
 					}
@@ -128,18 +108,22 @@
 					"sort": "none"
 				}
 			},
-			"pluginVersion": "11.6.0",
+			"pluginVersion": "11.5.2",
 			"targets": [
 				{
 					"alias": "",
+					"dataset": "iox",
 					"datasource": "InfluxDB",
+					"editorMode": "code",
+					"format": "table",
 					"groupBy": [],
 					"hide": false,
 					"measurement": "model_training",
 					"orderByTime": "ASC",
 					"policy": "$run",
-					"query": "SELECT \"loss\",\"age\",\"peer_id\" FROM \"$run\".\"autogen\".\"model_training\" WHERE $timeFilter AND peer_id =~ /^${peers:regex}$/",
+					"query": "",
 					"rawQuery": true,
+					"rawSql": "SELECT age,loss,peer_id FROM \"model_training_${run}\"\nWHERE REGEXP_LIKE(peer_id, '${peers:regex}')\nAND \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo\nORDER BY \"time\"",
 					"refId": "A",
 					"resultFormat": "time_series",
 					"select": [
@@ -150,25 +134,28 @@
 							}
 						]
 					],
+					"sql": {
+						"columns": [
+							{
+								"parameters": [],
+								"type": "function"
+							}
+						],
+						"groupBy": [
+							{
+								"property": {
+									"type": "string"
+								},
+								"type": "groupBy"
+							}
+						]
+					},
+					"table": "\"model_training_2025-04-24-12-26-52\"",
 					"tags": []
 				}
 			],
 			"title": "Train Loss",
 			"transformations": [
-				{
-					"id": "joinByField",
-					"options": {
-						"byField": "Time",
-						"mode": "outer"
-					}
-				},
-				{
-					"id": "renameByRegex",
-					"options": {
-						"regex": ".*\\.(loss|age|peer_id).*",
-						"renamePattern": "$1"
-					}
-				},
 				{
 					"id": "partitionByValues",
 					"options": {
@@ -220,7 +207,8 @@
 						"mode": "absolute",
 						"steps": [
 							{
-								"color": "green"
+								"color": "green",
+								"value": null
 							}
 						]
 					}
@@ -239,7 +227,9 @@
 					"calcs": ["lastNotNull"],
 					"displayMode": "table",
 					"placement": "right",
-					"showLegend": true
+					"showLegend": true,
+					"sortBy": "Name",
+					"sortDesc": false
 				},
 				"mapping": "auto",
 				"series": [
@@ -247,13 +237,13 @@
 						"x": {
 							"matcher": {
 								"id": "byName",
-								"options": "model_evaluation.age"
+								"options": "age"
 							}
 						},
 						"y": {
 							"matcher": {
 								"id": "byName",
-								"options": "model_evaluation.loss"
+								"options": "loss"
 							}
 						}
 					}
@@ -264,17 +254,21 @@
 					"sort": "none"
 				}
 			},
-			"pluginVersion": "11.6.0",
+			"pluginVersion": "11.5.2",
 			"targets": [
 				{
+					"dataset": "iox",
 					"datasource": "InfluxDB",
+					"editorMode": "code",
+					"format": "table",
 					"groupBy": [],
 					"hide": false,
 					"measurement": "model_training",
 					"orderByTime": "ASC",
 					"policy": "$run",
-					"query": "SELECT \"loss\",\"age\",\"peer_id\" FROM \"$run\".\"autogen\".\"model_evaluation\" WHERE $timeFilter AND peer_id =~ /^${peers:regex}$/",
+					"query": "",
 					"rawQuery": true,
+					"rawSql": "SELECT age,loss,peer_id FROM \"model_evaluation_${run}\"\nWHERE REGEXP_LIKE(peer_id, '${peers:regex}')\nAND \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo\nORDER BY \"time\"",
 					"refId": "A",
 					"resultFormat": "time_series",
 					"select": [
@@ -285,25 +279,27 @@
 							}
 						]
 					],
+					"sql": {
+						"columns": [
+							{
+								"parameters": [],
+								"type": "function"
+							}
+						],
+						"groupBy": [
+							{
+								"property": {
+									"type": "string"
+								},
+								"type": "groupBy"
+							}
+						]
+					},
 					"tags": []
 				}
 			],
 			"title": "Eval Loss",
 			"transformations": [
-				{
-					"id": "joinByField",
-					"options": {
-						"byField": "Time",
-						"mode": "outer"
-					}
-				},
-				{
-					"id": "renameByRegex",
-					"options": {
-						"regex": ".*\\.(loss|age|peer_id).*",
-						"renamePattern": "$1"
-					}
-				},
 				{
 					"id": "partitionByValues",
 					"options": {
@@ -339,35 +335,75 @@
 				},
 				"nodes": {
 					"arcs": [],
-					"mainStatUnit": "none"
+					"mainStatUnit": ""
 				},
 				"zoomMode": "cooperative"
 			},
-			"pluginVersion": "11.6.0",
+			"pluginVersion": "11.5.2",
 			"targets": [
 				{
 					"alias": "",
+					"dataset": "iox",
 					"datasource": {
 						"type": "influxdb",
 						"uid": "P951FEA4DE68E13C5"
 					},
+					"editorMode": "code",
+					"format": "table",
 					"hide": false,
-					"query": "SELECT \"id\", LAST(\"age\") FROM \"$run\".\"autogen\".\"peer_online\"  GROUP BY peer_id",
+					"query": "",
 					"rawQuery": true,
+					"rawSql": "SELECT \"peer_id\" AS \"title\", \"peer_id\" AS \"id\" ,last_value(\"age\" ORDER BY \"time\") AS \"mainstat\" FROM \"peer_online_${run}\"\nGROUP BY \"peer_id\"",
 					"refId": "nodes",
-					"resultFormat": "table"
+					"resultFormat": "table",
+					"sql": {
+						"columns": [
+							{
+								"parameters": [],
+								"type": "function"
+							}
+						],
+						"groupBy": [
+							{
+								"property": {
+									"type": "string"
+								},
+								"type": "groupBy"
+							}
+						]
+					}
 				},
 				{
 					"alias": "",
+					"dataset": "iox",
 					"datasource": {
 						"type": "influxdb",
 						"uid": "P951FEA4DE68E13C5"
 					},
+					"editorMode": "code",
+					"format": "table",
 					"hide": false,
-					"query": "SELECT \"source\", \"target\"\nFROM \"$run\".\"autogen\".\"peer_send\"\nWHERE $timeFilter\nAND peer_id =~ /^${peers:regex}$/\nGROUP BY peer_id\n",
+					"query": "",
 					"rawQuery": true,
+					"rawSql": "SELECT \"source\", \"target\" FROM \"peer_send_${run}\"\nWHERE \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo",
 					"refId": "edges",
-					"resultFormat": "table"
+					"resultFormat": "table",
+					"sql": {
+						"columns": [
+							{
+								"parameters": [],
+								"type": "function"
+							}
+						],
+						"groupBy": [
+							{
+								"property": {
+									"type": "string"
+								},
+								"type": "groupBy"
+							}
+						]
+					}
 				}
 			],
 			"title": "Nodes",
@@ -390,28 +426,11 @@
 					}
 				},
 				{
-					"id": "renameByRegex",
+					"disabled": true,
+					"id": "convertFieldType",
 					"options": {
-						"regex": ".*\\.(id|source|target)",
-						"renamePattern": "$1"
-					}
-				},
-				{
-					"id": "renameByRegex",
-					"options": {
-						"regex": "(last|age)",
-						"renamePattern": "mainstat"
-					}
-				},
-				{
-					"filter": {
-						"id": "byRefId",
-						"options": "/^(?:nodes)$/"
-					},
-					"id": "renameByRegex",
-					"options": {
-						"regex": "peer_id",
-						"renamePattern": "title"
+						"conversions": [],
+						"fields": {}
 					}
 				}
 			],
@@ -456,7 +475,8 @@
 						"mode": "absolute",
 						"steps": [
 							{
-								"color": "green"
+								"color": "green",
+								"value": null
 							}
 						]
 					}
@@ -488,7 +508,9 @@
 					"calcs": ["lastNotNull"],
 					"displayMode": "table",
 					"placement": "right",
-					"showLegend": true
+					"showLegend": true,
+					"sortBy": "Name",
+					"sortDesc": false
 				},
 				"mapping": "auto",
 				"series": [
@@ -496,13 +518,13 @@
 						"x": {
 							"matcher": {
 								"id": "byName",
-								"options": "model_evaluation.age"
+								"options": "age"
 							}
 						},
 						"y": {
 							"matcher": {
 								"id": "byName",
-								"options": "model_evaluation.accuracy"
+								"options": "accuracy"
 							}
 						}
 					}
@@ -513,17 +535,21 @@
 					"sort": "none"
 				}
 			},
-			"pluginVersion": "11.6.0",
+			"pluginVersion": "11.5.2",
 			"targets": [
 				{
+					"dataset": "iox",
 					"datasource": "InfluxDB",
+					"editorMode": "code",
+					"format": "table",
 					"groupBy": [],
 					"hide": false,
 					"measurement": "model_training",
 					"orderByTime": "ASC",
 					"policy": "$run",
-					"query": "SELECT \"accuracy\",\"age\",\"peer_id\" FROM \"$run\".\"autogen\".\"model_evaluation\" WHERE $timeFilter AND peer_id =~ /^${peers:regex}$/",
+					"query": "",
 					"rawQuery": true,
+					"rawSql": "SELECT accuracy,age,peer_id FROM \"model_evaluation_${run}\"\nWHERE REGEXP_LIKE(peer_id, '${peers:regex}')\nAND \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo\nORDER BY \"time\"",
 					"refId": "A",
 					"resultFormat": "time_series",
 					"select": [
@@ -534,25 +560,27 @@
 							}
 						]
 					],
+					"sql": {
+						"columns": [
+							{
+								"parameters": [],
+								"type": "function"
+							}
+						],
+						"groupBy": [
+							{
+								"property": {
+									"type": "string"
+								},
+								"type": "groupBy"
+							}
+						]
+					},
 					"tags": []
 				}
 			],
 			"title": "Eval Accuracy",
 			"transformations": [
-				{
-					"id": "joinByField",
-					"options": {
-						"byField": "Time",
-						"mode": "outer"
-					}
-				},
-				{
-					"id": "renameByRegex",
-					"options": {
-						"regex": ".*\\.(accuracy|age|peer_id).*",
-						"renamePattern": "$1"
-					}
-				},
 				{
 					"id": "partitionByValues",
 					"options": {
@@ -588,7 +616,8 @@
 						"mode": "absolute",
 						"steps": [
 							{
-								"color": "green"
+								"color": "green",
+								"value": null
 							},
 							{
 								"color": "red",
@@ -616,36 +645,94 @@
 				},
 				"frameIndex": 1,
 				"showHeader": true,
-				"sortBy": []
+				"sortBy": [
+					{
+						"desc": false,
+						"displayName": "peer_id"
+					}
+				]
 			},
-			"pluginVersion": "11.6.0",
+			"pluginVersion": "11.5.2",
 			"targets": [
 				{
+					"dataset": "iox",
 					"datasource": {
 						"type": "influxdb",
 						"uid": "P951FEA4DE68E13C5"
 					},
-					"query": "SELECT LAST(\"peers\") FROM \"$run\".\"autogen\".\"peer_active\" WHERE $timeFilter AND peer_id =~ /^${peers:regex}$/ GROUP BY peer_id",
+					"editorMode": "code",
+					"format": "table",
+					"hide": false,
 					"rawQuery": true,
+					"rawSql": "SELECT \"peer_id\",last_value(\"age\" ORDER BY \"time\") AS \"age\" FROM \"peer_online_${run}\"\nWHERE REGEXP_LIKE(peer_id, '${peers:regex}')\nAND \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo\nGROUP BY \"peer_id\"",
+					"refId": "B",
+					"sql": {
+						"columns": [
+							{
+								"parameters": [],
+								"type": "function"
+							}
+						],
+						"groupBy": [
+							{
+								"property": {
+									"type": "string"
+								},
+								"type": "groupBy"
+							}
+						]
+					}
+				},
+				{
+					"dataset": "iox",
+					"datasource": {
+						"type": "influxdb",
+						"uid": "P951FEA4DE68E13C5"
+					},
+					"editorMode": "code",
+					"format": "table",
+					"query": "",
+					"rawQuery": true,
+					"rawSql": "SELECT \"peer_id\",last_value(\"peers\" ORDER BY \"time\") AS \"peers\" FROM \"peer_active_${run}\"\nWHERE REGEXP_LIKE(peer_id, '${peers:regex}')\nAND \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo\nGROUP BY \"peer_id\"",
 					"refId": "A",
-					"resultFormat": "table"
+					"resultFormat": "table",
+					"sql": {
+						"columns": [
+							{
+								"parameters": [],
+								"type": "function"
+							}
+						],
+						"groupBy": [
+							{
+								"property": {
+									"type": "string"
+								},
+								"type": "groupBy"
+							}
+						]
+					}
 				}
 			],
 			"title": "Active Peers",
 			"transformations": [
 				{
-					"id": "filterFieldsByName",
+					"id": "convertFieldType",
 					"options": {
-						"include": {
-							"names": ["peer_id", "last"]
-						}
+						"conversions": [
+							{
+								"destinationType": "number",
+								"targetField": "peer_id"
+							}
+						],
+						"fields": {}
 					}
 				},
 				{
-					"id": "renameByRegex",
+					"id": "joinByField",
 					"options": {
-						"regex": "last",
-						"renamePattern": "active_peers"
+						"byField": "peer_id",
+						"mode": "outer"
 					}
 				}
 			],
@@ -654,7 +741,7 @@
 	],
 	"preload": false,
 	"refresh": "5s",
-	"schemaVersion": 41,
+	"schemaVersion": 40,
 	"tags": [],
 	"templating": {
 		"list": [
@@ -673,7 +760,7 @@
 					"query": "SELECT \"run\" FROM \"runs\"",
 					"refId": "InfluxVariableQueryEditor-VariableQuery"
 				},
-				"refresh": 2,
+				"refresh": 1,
 				"regex": "",
 				"sort": 2,
 				"type": "query"
@@ -689,14 +776,14 @@
 					"type": "influxdb",
 					"uid": "P951FEA4DE68E13C5"
 				},
-				"definition": "SELECT \"id\" FROM \"$run\".\"autogen\".\"peer_online\"",
+				"definition": "SELECT \"id\" FROM \"peer_online_$run\"",
 				"includeAll": true,
 				"label": "Peers",
 				"multi": true,
 				"name": "peers",
 				"options": [],
 				"query": {
-					"query": "SELECT \"id\" FROM \"$run\".\"autogen\".\"peer_online\"",
+					"query": "SELECT \"id\" FROM \"peer_online_$run\"",
 					"refId": "InfluxVariableQueryEditor-VariableQuery"
 				},
 				"refresh": 2,
@@ -714,5 +801,6 @@
 	"timezone": "browser",
 	"title": "Overview",
 	"uid": "deftllcm0xr7ka",
-	"version": 1
+	"version": 3,
+	"weekStart": ""
 }

@@ -1,15 +1,16 @@
 package telemetry
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
-	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	influxdb3 "github.com/InfluxCommunity/influxdb3-go/v2/influxdb3"
 )
 
 func (c *Client) RecordSend(age int, target string) {
-	point := influxdb2.NewPoint(
-		"peer_send",
+	point := influxdb3.NewPoint(
+		fmt.Sprintf("peer_send_%s", c.run),
 		c.tags,
 		map[string]any{
 			"age":    age,
@@ -20,12 +21,15 @@ func (c *Client) RecordSend(age int, target string) {
 	)
 
 	log("peer_send")
-	c.writeAPI.WritePoint(point)
+	err := c.client.WritePoints(c.ctx, []*influxdb3.Point{point})
+	if err != nil {
+		log_w(err)
+	}
 }
 
 func (c *Client) RecordOnline(age int) {
-	point := influxdb2.NewPoint(
-		"peer_online",
+	point := influxdb3.NewPoint(
+		fmt.Sprintf("peer_online_%s", c.run),
 		c.tags,
 		map[string]any{
 			"id":  c.name,
@@ -35,12 +39,15 @@ func (c *Client) RecordOnline(age int) {
 	)
 
 	log("peer_online")
-	c.writeAPI.WritePoint(point)
+	err := c.client.WritePoints(c.ctx, []*influxdb3.Point{point})
+	if err != nil {
+		log_w(err)
+	}
 }
 
 func (c *Client) RecordActivePeers(peers []string) {
-	point := influxdb2.NewPoint(
-		"peer_active",
+	point := influxdb3.NewPoint(
+		fmt.Sprintf("peer_active_%s", c.run),
 		c.tags,
 		map[string]any{
 			"id":    c.name,
@@ -50,5 +57,8 @@ func (c *Client) RecordActivePeers(peers []string) {
 	)
 
 	log("peer_active")
-	c.writeAPI.WritePoint(point)
+	err := c.client.WritePoints(c.ctx, []*influxdb3.Point{point})
+	if err != nil {
+		log_w(err)
+	}
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/quic-go/quic-go"
 	"github.com/vs-ude/btml/internal/model"
 	"github.com/vs-ude/btml/internal/structs"
+	"github.com/vs-ude/btml/internal/telemetry"
 )
 
 type Config struct {
@@ -27,7 +28,7 @@ type Config struct {
 	ModelConf   *model.Config
 	Addr        string
 	PeersetSize int
-	TelConf     *structs.TelemetryConf
+	TelConf     *telemetry.TelemetryConf
 }
 
 func Autoconf(c *Config) error {

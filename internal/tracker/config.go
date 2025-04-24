@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/vs-ude/btml/internal/structs"
+	"github.com/vs-ude/btml/internal/telemetry"
 )
 
 type Config struct {
@@ -18,7 +18,8 @@ type Config struct {
 		Dataset    string        `toml:"dataset"`
 		UpdateFreq time.Duration `toml:"update_freq"`
 	} `toml:"peer"`
-	TelConf *structs.TelemetryConf `toml:"telemetry"`
+	TelConf     *telemetry.TelemetryConf `toml:"telemetry"`
+	GrafanaConf *telemetry.GrafanaConf   `toml:"grafana"`
 }
 
 func (c *Config) String() string {

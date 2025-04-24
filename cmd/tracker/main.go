@@ -29,7 +29,7 @@ func main() {
 	t := tracker.NewTracker(listenAddr, configPath)
 	if telemetry {
 		t.EnableTelemetry()
-		go t.SetupTelemetry()
+		go t.SetupTelemetry(configPath)
 	}
 	go t.Serve(done)
 	go t.MaintenanceLoop()

@@ -2,10 +2,8 @@ package telemetry
 
 import "log/slog"
 
-func (c *Client) ErrorLogging() {
-	for err := range c.writeAPI.Errors() {
-		slog.Warn("Sending telemetry failed", "error", err)
-	}
+func log_w(err error) {
+	slog.Warn("Sending telemetry failed", "error", err)
 }
 
 func log(point string) {

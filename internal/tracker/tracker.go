@@ -71,8 +71,8 @@ func (t *Tracker) EnableTelemetry() {
 	t.telemetry.enabled = true
 }
 
-func (t *Tracker) SetupTelemetry() {
-	err := telemetry.InitConf(t.conf.TelConf)
+func (t *Tracker) SetupTelemetry(configPath string) {
+	err := telemetry.InitConf(t.conf.TelConf, t.conf.GrafanaConf, configPath)
 	if err != nil {
 		slog.Warn("Failed to set up telemetry", "error", err)
 		t.conf.TelConf = nil

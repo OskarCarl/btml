@@ -76,7 +76,6 @@ func main() {
 		} else {
 			slog.Debug("Telemetry client started")
 		}
-		go tc.ErrorLogging()
 		tc.RecordOnline(0)
 	}
 
