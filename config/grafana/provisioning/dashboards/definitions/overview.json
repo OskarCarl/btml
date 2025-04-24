@@ -123,7 +123,7 @@
 					"policy": "$run",
 					"query": "",
 					"rawQuery": true,
-					"rawSql": "SELECT age,loss,peer_id FROM \"model_training_${run}\"\nWHERE REGEXP_LIKE(peer_id, '${peers:regex}')\nAND \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo\nORDER BY \"time\"",
+					"rawSql": "SELECT age,loss,peer_id FROM \"model_training_${run}\"\nWHERE REGEXP_LIKE(peer_id, '^${peers:regex}$')\nAND \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo\nORDER BY \"time\"",
 					"refId": "A",
 					"resultFormat": "time_series",
 					"select": [
@@ -268,7 +268,7 @@
 					"policy": "$run",
 					"query": "",
 					"rawQuery": true,
-					"rawSql": "SELECT age,loss,peer_id FROM \"model_evaluation_${run}\"\nWHERE REGEXP_LIKE(peer_id, '${peers:regex}')\nAND \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo\nORDER BY \"time\"",
+					"rawSql": "SELECT age,loss,peer_id FROM \"model_evaluation_${run}\"\nWHERE REGEXP_LIKE(peer_id, '^${peers:regex}$')\nAND \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo\nORDER BY \"time\"",
 					"refId": "A",
 					"resultFormat": "time_series",
 					"select": [
@@ -353,8 +353,8 @@
 					"hide": false,
 					"query": "",
 					"rawQuery": true,
-					"rawSql": "SELECT \"peer_id\" AS \"title\", \"peer_id\" AS \"id\" ,last_value(\"age\" ORDER BY \"time\") AS \"mainstat\" FROM \"peer_online_${run}\"\nGROUP BY \"peer_id\"",
-					"refId": "nodes",
+					"rawSql": "SELECT \"source\", \"target\" FROM \"peer_send_${run}\"\nWHERE (REGEXP_LIKE(source, '^${peers:regex}$')\nOR REGEXP_LIKE(target, '^${peers:regex}$'))\nAND \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo",
+					"refId": "edges",
 					"resultFormat": "table",
 					"sql": {
 						"columns": [
@@ -385,8 +385,8 @@
 					"hide": false,
 					"query": "",
 					"rawQuery": true,
-					"rawSql": "SELECT \"source\", \"target\" FROM \"peer_send_${run}\"\nWHERE \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo",
-					"refId": "edges",
+					"rawSql": "SELECT \"peer_id\" AS \"title\", \"peer_id\" AS \"id\" ,last_value(\"age\" ORDER BY \"time\") AS \"mainstat\"\nFROM \"peer_online_${run}\"\nGROUP BY \"peer_id\"",
+					"refId": "nodes",
 					"resultFormat": "table",
 					"sql": {
 						"columns": [
@@ -423,14 +423,6 @@
 						"reduce": {
 							"reducer": "sum"
 						}
-					}
-				},
-				{
-					"disabled": true,
-					"id": "convertFieldType",
-					"options": {
-						"conversions": [],
-						"fields": {}
 					}
 				}
 			],
@@ -549,7 +541,7 @@
 					"policy": "$run",
 					"query": "",
 					"rawQuery": true,
-					"rawSql": "SELECT accuracy,age,peer_id FROM \"model_evaluation_${run}\"\nWHERE REGEXP_LIKE(peer_id, '${peers:regex}')\nAND \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo\nORDER BY \"time\"",
+					"rawSql": "SELECT accuracy,age,peer_id FROM \"model_evaluation_${run}\"\nWHERE REGEXP_LIKE(peer_id, '^${peers:regex}$')\nAND \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo\nORDER BY \"time\"",
 					"refId": "A",
 					"resultFormat": "time_series",
 					"select": [
@@ -664,7 +656,7 @@
 					"format": "table",
 					"hide": false,
 					"rawQuery": true,
-					"rawSql": "SELECT \"peer_id\",last_value(\"age\" ORDER BY \"time\") AS \"age\" FROM \"peer_online_${run}\"\nWHERE REGEXP_LIKE(peer_id, '${peers:regex}')\nAND \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo\nGROUP BY \"peer_id\"",
+					"rawSql": "SELECT \"peer_id\",last_value(\"age\" ORDER BY \"time\") AS \"age\" FROM \"peer_online_${run}\"\nWHERE REGEXP_LIKE(peer_id, '^${peers:regex}$')\nAND \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo\nGROUP BY \"peer_id\"",
 					"refId": "B",
 					"sql": {
 						"columns": [
@@ -693,7 +685,7 @@
 					"format": "table",
 					"query": "",
 					"rawQuery": true,
-					"rawSql": "SELECT \"peer_id\",last_value(\"peers\" ORDER BY \"time\") AS \"peers\" FROM \"peer_active_${run}\"\nWHERE REGEXP_LIKE(peer_id, '${peers:regex}')\nAND \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo\nGROUP BY \"peer_id\"",
+					"rawSql": "SELECT \"peer_id\",last_value(\"peers\" ORDER BY \"time\") AS \"peers\" FROM \"peer_active_${run}\"\nWHERE REGEXP_LIKE(peer_id, '^${peers:regex}$')\nAND \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo\nGROUP BY \"peer_id\"",
 					"refId": "A",
 					"resultFormat": "table",
 					"sql": {
@@ -777,7 +769,7 @@
 					"uid": "P951FEA4DE68E13C5"
 				},
 				"definition": "SELECT \"id\" FROM \"peer_online_$run\"",
-				"includeAll": true,
+				"includeAll": false,
 				"label": "Peers",
 				"multi": true,
 				"name": "peers",
