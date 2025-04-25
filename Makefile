@@ -51,12 +51,13 @@ prep-kernel:
 %/:
 	mkdir -p $@
 
-clean:
+clean: reset
 	rm -rf bin/ logs/
 	rm -f docs/diagrams/*.{pdf,png,svg}
 	@$(MAKE) -C model/ clean
 
 reset:
 	$(MAKE) -C model/ reset
+	rm -f config/tracker/.token
 
 .PHONY: clean test-go
