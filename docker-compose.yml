@@ -36,6 +36,15 @@ services:
     build:
       context: .
       dockerfile: ./docker/tracker.dockerfile
+    develop:
+      watch:
+        - path: ./cmd/tracker
+          action: rebuild
+        - path: ./internal
+          action: rebuild
+          ignore:
+            - model/
+            - peer/
     volumes:
       - ./config/tracker:/config
     depends_on:
@@ -58,6 +67,14 @@ services:
     #          - driver: nvidia
     #            count: 2
     #            capabilities: [gpu]
+    develop:
+      watch:
+        - path: ./cmd/peer
+          action: rebuild
+        - path: ./internal
+          action: rebuild
+          ignore:
+            - tracker/
     scale: 10
     command:
       [
