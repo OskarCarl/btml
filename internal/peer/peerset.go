@@ -12,18 +12,20 @@ import (
 type ErrPeerInactive error
 
 type PeerSet struct {
-	Active    map[string]*KnownPeer // subset of Known
-	Known     map[string]*KnownPeer
-	MaxSize   int
-	telemetry *telemetry.Client
+	Active      map[string]*KnownPeer // subset of Known
+	Known       map[string]*KnownPeer
+	MaxSize     int
+	SoftMaxSize int
+	telemetry   *telemetry.Client
 }
 
 func NewPeerSet(size int, telemetry *telemetry.Client) *PeerSet {
 	return &PeerSet{
-		Active:    make(map[string]*KnownPeer, size),
-		Known:     make(map[string]*KnownPeer),
-		MaxSize:   size,
-		telemetry: telemetry,
+		Active:      make(map[string]*KnownPeer, size),
+		Known:       make(map[string]*KnownPeer),
+		MaxSize:     size,
+		SoftMaxSize: int(size / 3 * 2),
+		telemetry:   telemetry,
 	}
 }
 
@@ -33,11 +35,18 @@ func (ps *PeerSet) Add(p *structs.Peer) error {
 		return err
 	case status == CHOKED:
 		ps.Known[p.Name].Update(p)
+		if ps.Space() > 0 {
+			ps.Unchoke(p.Name)
+			return nil
+		}
 		return fmt.Errorf("peer is known and choked")
 	case status == UNCHOKED:
 		ps.Known[p.Name].Update(p)
 	case status == UNKNOWN:
 		ps.Known[p.Name] = NewKnownPeer(p, ps.telemetry)
+		if ps.Space() > 0 {
+			ps.Unchoke(p.Name)
+		}
 	}
 	return nil
 }
@@ -120,4 +129,8 @@ func (ps *PeerSet) ActiveToString() []string {
 	}
 	slices.Sort(keys)
 	return keys
+}
+
+func (ps *PeerSet) Space() int {
+	return ps.MaxSize - len(ps.Active)
 }

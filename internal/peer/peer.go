@@ -11,12 +11,12 @@ import (
 )
 
 func Start(c *Config, m *model.Model, t *telemetry.Client) *Me {
-	me := NewMe(c, t)
-	me.Setup()
 	self := &structs.Peer{
 		Name:        c.Name,
 		Fingerprint: "abbabbaba",
 	}
+	me := NewMe(c, t, self)
+	me.Setup()
 	self.Addr = me.localAddr.(*net.UDPAddr)
 
 	me.tracker = &Tracker{

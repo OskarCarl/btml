@@ -3,7 +3,6 @@ package peer
 import (
 	"context"
 	"encoding/binary"
-	"fmt"
 	"log/slog"
 	"net"
 	"sync"
@@ -55,7 +54,7 @@ func (kp *KnownPeer) closeConn(reason string) {
 	if kp.conn != nil {
 		kp.Lock()
 		defer kp.Unlock()
-		kp.conn.CloseWithError(quic.ApplicationErrorCode(quic.NoError), reason)
+		kp.conn.CloseWithError(quic.ApplicationErrorCode(CHOKED), reason)
 		kp.conn = nil
 	}
 }
@@ -73,17 +72,25 @@ func (kp *KnownPeer) choke() error {
 
 func (kp *KnownPeer) Send(data []byte, age int, wg *sync.WaitGroup, ctx context.Context, dial func(addr net.Addr) (quic.Connection, error)) {
 	defer wg.Done()
-	conn, err := kp.getOrEstablishConnection(dial)
-	if err != nil {
-		slog.Warn("Failed to establish connection", "peer", kp.Name, "error", err)
+
+	conn := kp.getOrEstablishConnection(dial, ctx)
+	if conn == nil {
 		return
 	}
+	err := kp.send(conn, data, ctx)
+	if err == nil {
+		kp.LastUpdatedAge = age
+		if kp.telemetry != nil {
+			kp.telemetry.RecordSend(age, kp.Name)
+		}
+	}
+}
 
-	// Open a new stream for sending data
+func (kp *KnownPeer) send(conn quic.Connection, data []byte, ctx context.Context) error {
 	stream, err := conn.OpenStreamSync(ctx)
 	if err != nil {
-		slog.Warn("Failed to open stream", "peer", kp.Name, "error", err)
-		return
+		kp.condLog("Failed to open stream", err)
+		return err
 	}
 	defer stream.Close()
 
@@ -92,24 +99,21 @@ func (kp *KnownPeer) Send(data []byte, age int, wg *sync.WaitGroup, ctx context.
 	binary.BigEndian.PutUint32(lenBuf, uint32(len(data)))
 	_, err = stream.Write(lenBuf)
 	if err != nil {
-		slog.Warn("Failed writing message length", "peer", kp.Name, "error", err)
-		return
+		kp.condLog("Failed writing message length", err)
+		return err
 	}
 
 	// Write the actual message
 	slog.Info("Sending data", "peer", kp.Name)
 	_, err = stream.Write(data)
 	if err != nil {
-		slog.Warn("Failed sending data", "peer", kp.Name, "error", err)
-	} else {
-		kp.LastUpdatedAge = age
-		if kp.telemetry != nil {
-			kp.telemetry.RecordSend(age, kp.Name)
-		}
+		kp.condLog("Failed sending data", err)
+		return err
 	}
+	return nil
 }
 
-func (kp *KnownPeer) getOrEstablishConnection(dial func(addr net.Addr) (quic.Connection, error)) (quic.Connection, error) {
+func (kp *KnownPeer) getOrEstablishConnection(dial func(addr net.Addr) (quic.Connection, error), ctx context.Context) quic.Connection {
 	if kp.conn == nil {
 		kp.Lock()
 		defer kp.Unlock()
@@ -117,9 +121,19 @@ func (kp *KnownPeer) getOrEstablishConnection(dial func(addr net.Addr) (quic.Con
 		slog.Debug("Connecting to peer", "peer", kp.Name)
 		conn, err := dial(kp.Addr)
 		if err != nil {
-			return nil, fmt.Errorf("failed to connect to %s: %v", kp.Addr.String(), err)
+			kp.condLog("Failed to establish connection", err)
+			return nil
 		}
+
+		kp.send(conn, myPeerInfo, ctx)
+
 		kp.conn = conn
 	}
-	return kp.conn, nil
+	return kp.conn
+}
+
+func (kp *KnownPeer) condLog(msg string, err error) {
+	if qerr, ok := err.(*quic.ApplicationError); !ok || qerr.ErrorCode != quic.ApplicationErrorCode(CHOKED) {
+		slog.Warn(msg, "peer", kp.Name, "error", err)
+	}
 }

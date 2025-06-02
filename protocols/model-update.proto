@@ -9,3 +9,8 @@ message ModelUpdate {
 	bytes weights = 2;
 	int64 age = 3;
 }
+
+message PeerInfo {
+	string id = 1;
+	string fingerprint = 2;
+}

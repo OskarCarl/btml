@@ -10,7 +10,9 @@ import (
 
 	"github.com/quic-go/quic-go"
 	"github.com/vs-ude/btml/internal/model"
+	"github.com/vs-ude/btml/internal/structs"
 	"github.com/vs-ude/btml/internal/telemetry"
+	"google.golang.org/protobuf/proto"
 )
 
 type storage struct {
@@ -19,6 +21,8 @@ type storage struct {
 	outgoingStorage map[int]*model.Weights
 	incMutex        sync.Mutex
 }
+
+var myPeerInfo []byte
 
 // Me is the peer we use
 type Me struct {
@@ -34,13 +38,16 @@ type Me struct {
 	peerset    *PeerSet
 	pss        PeerSelectionStrategy
 	pds        StorageStrategy
-	conns      sync.Map // map[string]quic.Connection
 	data       storage
 	telemetry  *telemetry.Client
 }
 
-func NewMe(config *Config, telemetry *telemetry.Client) *Me {
+func NewMe(config *Config, telemetry *telemetry.Client, p *structs.Peer) *Me {
 	ctx, cancel := context.WithCancel(context.Background())
+	myPeerInfo, _ = proto.Marshal(&PeerInfo{
+		Id:          p.Name,
+		Fingerprint: p.Fingerprint,
+	})
 	return &Me{
 		Wg:         sync.WaitGroup{},
 		Ctx:        ctx,
@@ -49,7 +56,6 @@ func NewMe(config *Config, telemetry *telemetry.Client) *Me {
 		pss:        &RandomPeerSelectionStrategy{},
 		pds:        NewQuadraticStorage(10, 40),
 		quicConfig: generateQUICConfig(),
-		conns:      sync.Map{},
 		tlsConfig:  generateTLSConfig(),
 		data: storage{
 			incomingChan:    make(chan *model.Weights, 10),

@@ -3,11 +3,15 @@ package peer
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
+	"net"
+	"time"
 
 	"github.com/quic-go/quic-go"
 	"github.com/vs-ude/btml/internal/model"
+	"github.com/vs-ude/btml/internal/structs"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -33,22 +37,41 @@ func (me *Me) Listen() {
 			slog.Warn("Failed accepting connection", "error", err)
 			continue
 		}
+		if me.peerset.Space() < 1 {
+			conn.CloseWithError(quic.ApplicationErrorCode(CHOKED), "peer set full")
+			continue
+		}
 
-		me.conns.Store(conn.RemoteAddr().String(), conn)
 		go me.handleConnection(conn)
 	}
 }
 
 func (me *Me) handleConnection(conn quic.Connection) {
+	stream, err := conn.AcceptStream(me.Ctx)
+	if err != nil {
+		if qerr, ok := err.(*quic.ApplicationError); !ok || qerr.ErrorCode != quic.ApplicationErrorCode(CHOKED) {
+			slog.Warn("Failed accepting stream", "error", err)
+		}
+		conn.CloseWithError(0, "closed")
+		return
+	}
+	err = me.handlePeerInfo(stream, conn.RemoteAddr().(*net.UDPAddr))
+	if err != nil {
+		slog.Warn("New connection but not an active peer", "error", err)
+		conn.CloseWithError(quic.ApplicationErrorCode(CHOKED), "closed")
+		return
+	}
+
 	defer func() {
 		conn.CloseWithError(0, "closed")
-		me.conns.Delete(conn.RemoteAddr().String())
 	}()
-
+	me.telemetry.RecordActivePeers(me.peerset.ActiveToString())
 	for {
-		stream, err := conn.AcceptStream(me.Ctx)
+		stream, err = conn.AcceptStream(me.Ctx)
 		if err != nil {
-			slog.Warn("Failed accepting stream", "error", err)
+			if qerr, ok := err.(*quic.ApplicationError); !ok || qerr.ErrorCode != quic.ApplicationErrorCode(CHOKED) {
+				slog.Warn("Failed accepting stream", "error", err)
+			}
 			return
 		}
 
@@ -56,27 +79,51 @@ func (me *Me) handleConnection(conn quic.Connection) {
 	}
 }
 
+func (me *Me) handlePeerInfo(stream quic.Stream, addr *net.UDPAddr) error {
+	defer stream.Close()
+	msgLen, err := readLengthPrefix(stream)
+	if err != nil {
+		return fmt.Errorf("Unable to read PeerInfo length %w", err)
+	}
+	msgBuf := make([]byte, msgLen)
+	_, err = io.ReadFull(stream, msgBuf)
+	if err != nil {
+		return fmt.Errorf("Unable to read PeerInfo body %w", err)
+	}
+	peerInfo := &PeerInfo{}
+	err = proto.Unmarshal(msgBuf, peerInfo)
+	if err != nil {
+		return fmt.Errorf("Unable to unmarshal PeerInfo %w", err)
+	}
+
+	p := &structs.Peer{
+		Name:        peerInfo.Id,
+		Fingerprint: peerInfo.Fingerprint,
+		Addr:        addr,
+		LastSeen:    time.Now(),
+	}
+	return me.peerset.Add(p)
+}
+
 func (me *Me) handleStream(stream quic.Stream) {
 	defer stream.Close()
 
 	for {
-		// Read message length prefix (4 bytes)
-		lenBuf := make([]byte, 4)
-		_, err := io.ReadFull(stream, lenBuf)
+		msgLen, err := readLengthPrefix(stream)
 		if err != nil {
-			if !errors.Is(err, io.EOF) {
+			if qerr, ok := err.(*quic.ApplicationError); !errors.Is(err, io.EOF) || (ok && qerr.ErrorCode != quic.ApplicationErrorCode(CHOKED)) {
 				slog.Warn("Failed reading message length", "error", err)
 			}
 			return
 		}
 
-		msgLen := binary.BigEndian.Uint32(lenBuf)
-
 		// Read the actual message
 		msgBuf := make([]byte, msgLen)
 		_, err = io.ReadFull(stream, msgBuf)
 		if err != nil {
-			slog.Warn("Failed reading message body", "error", err)
+			if qerr, ok := err.(*quic.ApplicationError); !ok || qerr.ErrorCode != quic.ApplicationErrorCode(CHOKED) {
+				slog.Warn("Failed reading message body", "error", err)
+			}
 			return
 		}
 
@@ -93,4 +140,15 @@ func (me *Me) handleStream(stream quic.Stream) {
 		slog.Info("Received model update", "source", update.Source, "age", update.Age)
 		me.data.incomingChan <- w
 	}
+}
+
+// readLengthPrefix extracts the message length prefix (4 bytes)
+func readLengthPrefix(stream quic.Stream) (uint32, error) {
+	lenBuf := make([]byte, 4)
+	_, err := io.ReadFull(stream, lenBuf)
+	if err != nil {
+		return 0, err
+	}
+
+	return binary.BigEndian.Uint32(lenBuf), nil
 }

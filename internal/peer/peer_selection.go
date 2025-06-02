@@ -21,7 +21,7 @@ func (rps *RandomPeerSelectionStrategy) Select(me *Me) error {
 	for n, _ := range me.tracker.Peers.List {
 		selection[n] = me.peerset.Known[n]
 		i++
-		if i == me.config.PeersetSize {
+		if i == me.peerset.SoftMaxSize {
 			break
 		}
 	}
