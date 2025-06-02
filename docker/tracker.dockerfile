@@ -1,4 +1,4 @@
-FROM golang:1.23 AS builder
+FROM golang:1.24 AS builder
 
 WORKDIR /workspace
 ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64

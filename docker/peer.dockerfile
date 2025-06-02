@@ -11,7 +11,7 @@ COPY protocols/ /workspace/protocols
 RUN protoc --python_betterproto_out=./ -I./protocols/ peer-model.proto
 
 
-FROM golang:1.23 AS go-builder
+FROM golang:1.24 AS go-builder
 WORKDIR /workspace
 ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 
