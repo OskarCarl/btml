@@ -32,7 +32,9 @@ func (t *Tracker) initPeer(w http.ResponseWriter, r *http.Request) {
 		Dataset:    t.conf.Peer.Dataset,
 		UpdateFreq: t.conf.Peer.UpdateFreq,
 		ExtIp:      host,
-		Telemetry:  *t.conf.TelConf,
+	}
+	if t.telemetry.enabled {
+		who.Telemetry = *t.conf.TelConf
 	}
 	buf, _ := json.Marshal(who)
 	w.Write(buf)

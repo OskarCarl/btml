@@ -10,6 +10,7 @@ import (
 	"github.com/vs-ude/btml/internal/model"
 	"github.com/vs-ude/btml/internal/peer"
 	"github.com/vs-ude/btml/internal/play"
+	"github.com/vs-ude/btml/internal/structs"
 )
 
 func main() {
@@ -28,7 +29,7 @@ func main() {
 		slog.Error("Failed to create model", "error", err)
 		os.Exit(1)
 	}
-	me := peer.NewMe(&peer.Config{}, nil)
+	me := peer.NewMe(&peer.Config{}, nil, &structs.Peer{})
 	p := play.NewPlay(me, mod)
 	p.AddStep(&play.Train{})
 	p.AddStep(&play.Eval{})

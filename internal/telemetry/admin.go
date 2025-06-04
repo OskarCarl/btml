@@ -14,6 +14,9 @@ import (
 
 func InitConf(tc *TelemetryConf, gc *GrafanaConf, configPath string) error {
 	tc.Suffix = time.Now().Format("2006_01_02_15_04_05")
+	if err := waitForUp(tc, gc); err != nil {
+		return err
+	}
 	if err := getAdminToken(tc, configPath); err != nil {
 		return fmt.Errorf("failed to get admin token: %w", err)
 	}
@@ -22,6 +25,33 @@ func InitConf(tc *TelemetryConf, gc *GrafanaConf, configPath string) error {
 	}
 	if err := provisionGrafanaDatasource(gc, tc); err != nil {
 		return fmt.Errorf("failed to provision Grafana datasource: %w", err)
+	}
+	return nil
+}
+
+func waitForUp(tc *TelemetryConf, gc *GrafanaConf) error {
+	errC := make(chan error)
+	checker := func(url, name string) {
+		for range 10 {
+			resp, err := http.Get(url)
+			if err == nil && resp.StatusCode == http.StatusOK {
+				errC <- nil
+				return
+			}
+			slog.Info(fmt.Sprintf("Waiting for %s", name))
+			time.Sleep(time.Second)
+		}
+		errC <- fmt.Errorf("waited 10s for %s, no response", name)
+	}
+
+	go checker(fmt.Sprintf("%s/health", tc.URL), "InfluxDB")
+	go checker(fmt.Sprintf("%s/api/health", gc.URL), "Grafana")
+
+	for range 2 {
+		e := <-errC
+		if e != nil {
+			return e
+		}
 	}
 	return nil
 }

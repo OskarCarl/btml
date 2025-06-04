@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"math/big"
 	"net/http"
@@ -34,17 +35,12 @@ type Config struct {
 func Autoconf(c *Config) error {
 	var resp *http.Response
 	var err error
-	code := http.StatusServiceUnavailable
-	for code == http.StatusServiceUnavailable {
+	for {
 		resp, err = http.Get(c.TrackerURL + "/whoami")
-		if err != nil {
-			return err
-		}
-		code = resp.StatusCode
-		if code == http.StatusOK {
+		if err == nil && resp.StatusCode == http.StatusOK {
 			break
-		} else if code != http.StatusServiceUnavailable {
-			return errors.New("unable to connect to tracker for autoconfiguration")
+		} else if (err != nil && !errors.Is(err, io.EOF)) || (resp != nil && resp.StatusCode != http.StatusServiceUnavailable) {
+			return fmt.Errorf("unable to connect to tracker for autoconfiguration: %w", err)
 		}
 		slog.Info("Waiting for tracker to be ready")
 		time.Sleep(time.Second * 5)
@@ -57,7 +53,7 @@ func Autoconf(c *Config) error {
 	whoami := new(structs.WhoAmI)
 	err = json.Unmarshal(*body, whoami)
 	if err != nil {
-		return fmt.Errorf("unable to parse whoami response body data from tracker\n%w", err)
+		return fmt.Errorf("unable to parse whoami response body data from tracker: %w", err)
 	}
 
 	c.Name = strconv.Itoa(whoami.Id)
