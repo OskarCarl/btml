@@ -83,7 +83,7 @@ func TestPartialQuadraticStorage(t *testing.T) {
 }
 
 func prepareQuadraticStorage() peer.StorageStrategy {
-	d := peer.NewQuadraticStorage(3, 6)
+	d := peer.NewDoubleAgeStorage(3, 6)
 
 	for a := range 22 {
 		d.Store(*model.NewWeights(make([]byte, 0), a))
@@ -93,7 +93,7 @@ func prepareQuadraticStorage() peer.StorageStrategy {
 }
 
 func preparePartialQuadraticStorage() peer.StorageStrategy {
-	d := peer.NewQuadraticStorage(3, 6)
+	d := peer.NewDoubleAgeStorage(3, 6)
 
 	for a := range 3 {
 		d.Store(*model.NewWeights(make([]byte, 0), a))

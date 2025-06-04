@@ -54,7 +54,7 @@ func NewMe(config *Config, telemetry *telemetry.Client, p *structs.Peer) *Me {
 		cancel:     cancel,
 		config:     config,
 		pss:        &RandomPeerSelectionStrategy{},
-		pds:        NewQuadraticStorage(10, 40),
+		pds:        NewDoubleAgeStorage(10, 40),
 		quicConfig: generateQUICConfig(),
 		tlsConfig:  generateTLSConfig(),
 		data: storage{

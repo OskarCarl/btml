@@ -4,6 +4,7 @@ import (
 	"container/ring"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/vs-ude/btml/internal/model"
@@ -15,30 +16,31 @@ type StorageStrategy interface {
 	Retrieve(min int) (*model.Weights, error)
 }
 
-// Only distributes updates that are at less than twice as mature as what the
-// peer was sent last time.
-type QuadraticStorage struct {
-	storage        map[int]*model.Weights
-	quadraticSteps []int
-	stepSizeCap    int
-	currentMax     int
-	nextStep       int
-	last           *ring.Ring
+// This strategy attempts to only serve updates that are at most double the age
+// of the given min. There is some leeway in this due to the probability of
+// gaps in the stored updates.
+type DoubleAgeStorage struct {
+	storage     map[int]*model.Weights
+	steps       []int
+	stepSizeCap int
+	currentMax  int
+	nextStep    int
+	last        *ring.Ring
 	sync.Mutex
 }
 
-func NewQuadraticStorage(lastN int, stepSizeCap int) *QuadraticStorage {
-	return &QuadraticStorage{
-		storage:        make(map[int]*model.Weights),
-		quadraticSteps: make([]int, 0),
-		stepSizeCap:    stepSizeCap,
-		currentMax:     0,
-		nextStep:       2,
-		last:           ring.New(lastN),
+func NewDoubleAgeStorage(lastN int, stepSizeCap int) *DoubleAgeStorage {
+	return &DoubleAgeStorage{
+		storage:     make(map[int]*model.Weights),
+		steps:       make([]int, 0),
+		stepSizeCap: stepSizeCap,
+		currentMax:  0,
+		nextStep:    2,
+		last:        ring.New(lastN),
 	}
 }
 
-func (h *QuadraticStorage) Decide(p *KnownPeer, w *model.Weights) (bool, error) {
+func (h *DoubleAgeStorage) Decide(p *KnownPeer, w *model.Weights) (bool, error) {
 	if w.GetAge() > 4 && p.LastUpdatedAge < (w.GetAge()/2) {
 		return false, nil
 	}
@@ -46,46 +48,53 @@ func (h *QuadraticStorage) Decide(p *KnownPeer, w *model.Weights) (bool, error) 
 }
 
 // Store ignores updates that are older than the current maximum age.
-func (h *QuadraticStorage) Store(w model.Weights) {
+func (h *DoubleAgeStorage) Store(w model.Weights) {
 	a := w.GetAge()
 	// Should be strictly increasing anyway
 	if a < h.currentMax {
+		slog.Info("Got updates to store in non-incremental order! Ignoring", "new", a, "currentMax", h.currentMax)
 		return
 	}
 	h.Lock()
 	defer h.Unlock()
-	// This now points to the oldest weight we stored in the ring
-	h.last = h.last.Next()
 
-	if a == h.nextStep {
-		h.quadraticSteps = append(h.quadraticSteps, a)
-		h.storage[a] = &w
-		h.progressStep()
-	} else if a > h.nextStep {
+	if a >= h.nextStep {
 		oldW, ok := h.last.Value.(*model.Weights)
-		if ok {
-			h.quadraticSteps = append(h.quadraticSteps, oldW.GetAge())
-			h.storage[a] = oldW
+		if ok && oldIsCloser(oldW.GetAge(), h.nextStep, a) {
+			h.steps = append(h.steps, oldW.GetAge())
+			h.storage[oldW.GetAge()] = oldW
+		} else {
+			h.steps = append(h.steps, a)
+			h.storage[a] = &w
 		}
-		h.progressStep()
+		h.progressStep(a)
 	}
 
-	// Always store the last N weights
+	// This now points to the oldest weight we stored in the ring
+	h.last = h.last.Next()
 	h.last.Value = &w
 	h.currentMax = a
 }
 
-func (h *QuadraticStorage) progressStep() {
-	h.nextStep = min(2*h.nextStep, h.nextStep+h.stepSizeCap)
+// oldIsCloser tests whether the older age is closer to the step than the
+// newer. It assumes old < step && step <= new
+func oldIsCloser(old, step, new int) bool {
+	return step-old < new-step
+}
+
+func (h *DoubleAgeStorage) progressStep(c int) {
+	for h.nextStep < c {
+		h.nextStep = min(2*h.nextStep, h.nextStep+h.stepSizeCap)
+	}
 }
 
 // Retrieve retrieves the last stored weights.
-func (h *QuadraticStorage) Retrieve(min int) (*model.Weights, error) {
+func (h *DoubleAgeStorage) Retrieve(min int) (*model.Weights, error) {
 	if min >= h.currentMax {
 		return nil, errors.New("already up to date")
 	}
 	if h.last.Value == nil {
-		return nil, errors.New("no weigths stored yet")
+		return nil, errors.New("no weights stored yet")
 	}
 	h.Lock()
 	defer h.Unlock()
@@ -103,11 +112,15 @@ func (h *QuadraticStorage) Retrieve(min int) (*model.Weights, error) {
 			candidate = candidate.Next()
 		}
 	}
-	if len(h.quadraticSteps) > 0 && min <= h.quadraticSteps[len(h.quadraticSteps)-1] {
-		// Search in the list of quadratically distanced updates
-		for _, step := range h.quadraticSteps {
-			if step >= min {
-				return h.storage[step], nil
+	if len(h.steps) > 0 && min <= h.steps[len(h.steps)-1] {
+		// Search in the list of older updates
+		prev := -1
+		for _, cur := range h.steps {
+			if cur >= min {
+				if prev != -1 && oldIsCloser(prev, min, cur) {
+					return h.storage[prev], nil
+				}
+				return h.storage[cur], nil
 			}
 		}
 	}
@@ -116,7 +129,7 @@ func (h *QuadraticStorage) Retrieve(min int) (*model.Weights, error) {
 
 // getOldest returns the container of the oldest stored weights, skipping empty
 // places in the ring.
-func (h *QuadraticStorage) getOldest() *ring.Ring {
+func (h *DoubleAgeStorage) getOldest() *ring.Ring {
 	candidate := h.last.Next()
 	start := candidate
 	for _, ok := candidate.Value.(*model.Weights); candidate.Value == nil || !ok; {
@@ -128,7 +141,7 @@ func (h *QuadraticStorage) getOldest() *ring.Ring {
 	return candidate
 }
 
-func (h *QuadraticStorage) String() string {
+func (h *DoubleAgeStorage) String() string {
 	h.Lock()
 	defer h.Unlock()
 	ring := ""
@@ -147,12 +160,12 @@ func (h *QuadraticStorage) String() string {
 	}
 
 	steps := ""
-	if len(h.quadraticSteps) == 0 {
+	if len(h.steps) == 0 {
 		steps = "empty"
 	} else {
-		steps = fmt.Sprintf("%v", h.quadraticSteps)
+		steps = fmt.Sprintf("%v", h.steps)
 	}
 	return fmt.Sprintf(
-		"HalfDistanceDistribution{currentMax: %d, nextStep: %d, ring:%s, steps: %s}",
+		"DoubleAgeStorage{currentMax: %d, nextStep: %d, ring:%s, steps: %s}",
 		h.currentMax, h.nextStep, ring, steps)
 }
