@@ -111,7 +111,7 @@ func (me *Me) handleStream(stream quic.Stream) {
 	for {
 		msgLen, err := readLengthPrefix(stream)
 		if err != nil {
-			if qerr, ok := err.(*quic.ApplicationError); !errors.Is(err, io.EOF) || (ok && qerr.ErrorCode != quic.ApplicationErrorCode(CHOKED)) {
+			if qerr, ok := err.(*quic.ApplicationError); !errors.Is(err, io.EOF) && (!ok || qerr.ErrorCode != quic.ApplicationErrorCode(CHOKED)) {
 				slog.Warn("Failed reading message length", "error", err)
 			}
 			return

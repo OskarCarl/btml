@@ -3,6 +3,7 @@ package peer
 import (
 	"errors"
 	"fmt"
+	"math"
 	"slices"
 
 	"github.com/vs-ude/btml/internal/structs"
@@ -24,7 +25,7 @@ func NewPeerSet(size int, telemetry *telemetry.Client) *PeerSet {
 		Active:      make(map[string]*KnownPeer, size),
 		Known:       make(map[string]*KnownPeer),
 		MaxSize:     size,
-		SoftMaxSize: int(size / 3 * 2),
+		SoftMaxSize: int(math.Round(float64(size) / 3 * 2)),
 		telemetry:   telemetry,
 	}
 }
