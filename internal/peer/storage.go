@@ -83,7 +83,7 @@ func oldIsCloser(old, step, new int) bool {
 }
 
 func (h *DoubleAgeStorage) progressStep(c int) {
-	for h.nextStep < c {
+	for h.nextStep <= c {
 		h.nextStep = min(2*h.nextStep, h.nextStep+h.stepSizeCap)
 	}
 }

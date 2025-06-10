@@ -61,8 +61,7 @@
 						"mode": "absolute",
 						"steps": [
 							{
-								"color": "green",
-								"value": null
+								"color": "green"
 							}
 						]
 					}
@@ -108,7 +107,7 @@
 					"sort": "none"
 				}
 			},
-			"pluginVersion": "11.5.2",
+			"pluginVersion": "12.0.1",
 			"targets": [
 				{
 					"alias": "",
@@ -207,8 +206,7 @@
 						"mode": "absolute",
 						"steps": [
 							{
-								"color": "green",
-								"value": null
+								"color": "green"
 							}
 						]
 					}
@@ -254,7 +252,7 @@
 					"sort": "none"
 				}
 			},
-			"pluginVersion": "11.5.2",
+			"pluginVersion": "12.0.1",
 			"targets": [
 				{
 					"dataset": "iox",
@@ -333,13 +331,14 @@
 				"edges": {
 					"mainStatUnit": ""
 				},
+				"layoutAlgorithm": "force",
 				"nodes": {
 					"arcs": [],
 					"mainStatUnit": ""
 				},
 				"zoomMode": "cooperative"
 			},
-			"pluginVersion": "11.5.2",
+			"pluginVersion": "12.0.1",
 			"targets": [
 				{
 					"alias": "",
@@ -467,8 +466,7 @@
 						"mode": "absolute",
 						"steps": [
 							{
-								"color": "green",
-								"value": null
+								"color": "green"
 							}
 						]
 					}
@@ -527,7 +525,7 @@
 					"sort": "none"
 				}
 			},
-			"pluginVersion": "11.5.2",
+			"pluginVersion": "12.0.1",
 			"targets": [
 				{
 					"dataset": "iox",
@@ -608,8 +606,7 @@
 						"mode": "absolute",
 						"steps": [
 							{
-								"color": "green",
-								"value": null
+								"color": "green"
 							},
 							{
 								"color": "red",
@@ -644,7 +641,7 @@
 					}
 				]
 			},
-			"pluginVersion": "11.5.2",
+			"pluginVersion": "12.0.1",
 			"targets": [
 				{
 					"dataset": "iox",
@@ -733,7 +730,7 @@
 	],
 	"preload": false,
 	"refresh": "5s",
-	"schemaVersion": 40,
+	"schemaVersion": 41,
 	"tags": [],
 	"templating": {
 		"list": [
@@ -793,6 +790,5 @@
 	"timezone": "browser",
 	"title": "Overview",
 	"uid": "deftllcm0xr7ka",
-	"version": 3,
-	"weekStart": ""
+	"version": 1
 }

@@ -7,16 +7,16 @@ import (
 	"github.com/vs-ude/btml/internal/peer"
 )
 
-func TestPrintQuadraticStorage(t *testing.T) {
-	d := prepareQuadraticStorage()
+func TestPrintStorage(t *testing.T) {
+	d := prepareDoubleAgeStorage()
 	t.Log(d)
-	d = preparePartialQuadraticStorage()
+	d = preparePartialDoubleAgeStorage()
 	t.Log(d)
 }
 
-func TestQuadraticStorageLast(t *testing.T) {
+func TestDoubleAgeStorageLast(t *testing.T) {
 	// prepare
-	d := prepareQuadraticStorage()
+	d := prepareDoubleAgeStorage()
 	requests := []int{19, 20}
 	results := make([]int, 0, len(requests))
 
@@ -36,9 +36,9 @@ func TestQuadraticStorageLast(t *testing.T) {
 	}
 }
 
-func TestQuadraticStorageSteps(t *testing.T) {
+func TestDoubleAgeStorageSteps(t *testing.T) {
 	// prepare
-	d := prepareQuadraticStorage()
+	d := prepareDoubleAgeStorage()
 	requests := []int{1, 2, 3, 5, 11, 15, 16}
 	expect := []int{2, 2, 4, 8, 14, 20, 20}
 	results := make([]int, 0, len(requests))
@@ -59,9 +59,9 @@ func TestQuadraticStorageSteps(t *testing.T) {
 	}
 }
 
-func TestPartialQuadraticStorage(t *testing.T) {
+func TestPartialDoubleAgeStorage(t *testing.T) {
 	// prepare
-	d := preparePartialQuadraticStorage()
+	d := preparePartialDoubleAgeStorage()
 	requests := []int{0, 1}
 	expect := []int{0, 1}
 	results := make([]int, 0, len(requests))
@@ -82,7 +82,7 @@ func TestPartialQuadraticStorage(t *testing.T) {
 	}
 }
 
-func prepareQuadraticStorage() peer.StorageStrategy {
+func prepareDoubleAgeStorage() peer.StorageStrategy {
 	d := peer.NewDoubleAgeStorage(3, 6)
 
 	for a := range 22 {
@@ -92,7 +92,7 @@ func prepareQuadraticStorage() peer.StorageStrategy {
 	return d
 }
 
-func preparePartialQuadraticStorage() peer.StorageStrategy {
+func preparePartialDoubleAgeStorage() peer.StorageStrategy {
 	d := peer.NewDoubleAgeStorage(3, 6)
 
 	for a := range 3 {
