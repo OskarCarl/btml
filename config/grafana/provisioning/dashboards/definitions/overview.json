@@ -701,6 +701,35 @@
 							}
 						]
 					}
+				},
+				{
+					"dataset": "iox",
+					"datasource": {
+						"type": "influxdb",
+						"uid": "P951FEA4DE68E13C5"
+					},
+					"editorMode": "code",
+					"format": "table",
+					"hide": false,
+					"rawQuery": true,
+					"rawSql": "SELECT \"peer_id\",last_value(\"guesses\" ORDER BY \"time\") AS \"guesses\" FROM \"model_evaluation_${run}\"\nWHERE REGEXP_LIKE(peer_id, '^${peers:regex}$')\nAND \"time\" >= $__timeFrom\nAND \"time\" <= $__timeTo\nGROUP BY \"peer_id\"",
+					"refId": "C",
+					"sql": {
+						"columns": [
+							{
+								"parameters": [],
+								"type": "function"
+							}
+						],
+						"groupBy": [
+							{
+								"property": {
+									"type": "string"
+								},
+								"type": "groupBy"
+							}
+						]
+					}
 				}
 			],
 			"title": "Active Peers",
@@ -729,7 +758,7 @@
 		}
 	],
 	"preload": false,
-	"refresh": "5s",
+	"refresh": "30s",
 	"schemaVersion": 41,
 	"tags": [],
 	"templating": {
@@ -755,7 +784,7 @@
 				"type": "query"
 			},
 			{
-				"allValue": ".",
+				"allValue": ".*",
 				"allowCustomValue": false,
 				"current": {
 					"text": "All",
@@ -766,7 +795,7 @@
 					"uid": "P951FEA4DE68E13C5"
 				},
 				"definition": "SELECT \"id\" FROM \"peer_online_$run\"",
-				"includeAll": false,
+				"includeAll": true,
 				"label": "Peers",
 				"multi": true,
 				"name": "peers",
@@ -790,5 +819,5 @@
 	"timezone": "browser",
 	"title": "Overview",
 	"uid": "deftllcm0xr7ka",
-	"version": 1
+	"version": 2
 }
