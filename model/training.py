@@ -8,22 +8,37 @@ from numpy import array, unique, concatenate
 from config import DEVICE, LEARNING_RATE
 
 
+# Based on https://github.com/Abhi-H/CNN-with-Fashion-MNIST-dataset/
 class NeuralNetwork(nn.Module):
     def __init__(self):
         super().__init__()
-        self.flatten = nn.Flatten()
-        self.linear_relu_stack = nn.Sequential(
-            nn.Linear(28*28, 100),
-            nn.ReLU(),
-            nn.Linear(100, 100),
-            nn.ReLU(),
-            nn.Linear(100, 10)
-        )
+        self.cnn1 = nn.Conv2d(in_channels=1,out_channels=16,kernel_size=5,stride=1,padding=2)
+        self.relu1=nn.ELU()
+        nn.init.xavier_uniform_(self.cnn1.weight)
+
+        self.maxpool1=nn.MaxPool2d(kernel_size=2)
+
+        self.cnn2=nn.Conv2d(in_channels=16,out_channels=32,kernel_size=5,stride=1,padding=2)
+        self.relu2=nn.ELU()
+        nn.init.xavier_uniform_(self.cnn2.weight)
+
+        self.maxpool2=nn.MaxPool2d(kernel_size=2)
+
+        self.fcl=nn.Linear(32*7*7,10)
 
     def forward(self, x):
-        x = self.flatten(x)
-        logits = self.linear_relu_stack(x)
-        return logits
+        out=self.cnn1(x)
+        out=self.relu1(out)
+        out=self.maxpool1(out)
+        out=self.cnn2(out)
+        out=self.relu2(out)
+        out=self.maxpool2(out)
+
+        out=out.view(out.size(0),-1)
+
+        out=self.fcl(out)
+
+        return out
 
 
 class Model:
