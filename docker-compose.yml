@@ -91,8 +91,8 @@ services:
         "/logs",
       ]
     volumes:
-      - ./model/data:/data:rw
-      - ./model/logs:/logs:rw
+      - ./data/:/data:rw
+      - ./logs:/logs:rw
     depends_on:
       - tracker
       - influx

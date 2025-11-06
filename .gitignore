@@ -1,5 +1,9 @@
 bin/
-logs/
+build/
+logs/*
+!logs/.gitkeep
+data/
+!data/prepared_*
 __debug*
 
 *.pb.go

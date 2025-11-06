@@ -1,8 +1,10 @@
-import os
-import torch
-from torchvision import datasets, transforms
-from torch.utils.data import random_split
+# pyright: basic
 import argparse
+import os
+
+import torch
+from torch.utils.data import random_split
+from torchvision import datasets, transforms  # pyright: ignore[reportMissingImports]
 
 
 def download_and_process_fashion_mnist(data_dir: str = "data"):
