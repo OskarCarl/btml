@@ -11,9 +11,9 @@ MODEL_CMDLINE ?= --oneshot --train-data data/prepared/fMNIST_train_split_$(PEER_
 test: test-reqs
 	$(MAKE) docker-run-cpu MODEL_CMDLINE="$(MODEL_CMDLINE) --oneshot"
 
-test-reqs: .setup .docker-build lib/model.py logs/
+test-reqs: lib/model.py logs/
 
-docker-run-cpu: logs/ lib/model.py .docker-build
+docker-run-cpu: logs/ lib/model.py
 	docker run $(DOCKERFLAGS) $(IMAGE) python main.py $(MODEL_CMDLINE)
 
 docker-run-amd: logs/ lib/model.py
@@ -22,27 +22,14 @@ docker-run-amd: logs/ lib/model.py
 docker-prepare-data: data/prepared/
 	docker run $(DOCKERFLAGS) $(IMAGE) python tools/data.py --output-dir data/prepared --num-splits 100
 
-lib/model.py: lib/ ../protocols/peer-model.proto venv/bin/protoc-gen-python_betterproto
-	protoc --plugin=venv/bin/protoc-gen-python_betterproto --python_betterproto_out=./lib/ -I../protocols/ peer-model.proto
-
-venv/bin/protoc-gen-python_betterproto: .setup
-
-.setup: venv/ requirements.txt requirements-dev.txt
-	./venv/bin/pip install -r requirements.txt -r requirements-dev.txt
-	echo "$(shell date --iso=seconds)" > .setup
-
-.docker-build: Dockerfile
-	docker build -t $(IMAGE):latest .
-	echo "$(shell date --iso=seconds)" > .docker-build
-
-venv/:
-	python -m venv ./venv
+lib/model.py: lib/ ../protocols/peer-model.proto ../.venv/bin/protoc-gen-python_betterproto2
+	protoc --plugin=../.venv/bin/protoc-gen-python_betterproto2 --python_betterproto2_out=./lib/ -I../protocols/ peer-model.proto
 
 %/:
 	mkdir -p $@
 
 clean:
-	rm -rf venv/ logs/ __pycache__/ **/__pycache__/ .setup
+	rm -rf logs/ __pycache__/ **/__pycache__/
 
 reset:
 	rm -f logs/*.log
