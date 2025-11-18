@@ -23,10 +23,11 @@ This project requires some dependencies to be installed:
 - [Protobuf Compiler](https://protobuf.dev/) (protoc)
 	- With the [protobuf-go](https://github.com/protocolbuffers/protobuf-go) plugin
 - Python
-	- For [PyTorch](https://pytorch.org/) and [Betterproto](https://github.com/danielgtaylor/python-betterproto)
+	- For [PyTorch](https://pytorch.org/)
+	- [uv](https://docs.astral.sh/uv/) to manage the Python dependencies and packaging
 - [Make](https://www.gnu.org/software/make/) to ease the setup and build process
 
 The tracker can be built and run with `make test-tracker`.
-Then you can start peers with `make test-peer`. This will also set up the Python model requirements.
+Then you can start peers with `make test-peer`.
 
 There is no telemetry collection or visualization configured for the native deployment.
