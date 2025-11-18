@@ -85,6 +85,6 @@ func marshalUpdate(data *model.Weights, source string) ([]byte, error) {
 	return proto.Marshal(update)
 }
 
-func (me *Me) dialPeer(addr net.Addr) (quic.Connection, error) {
+func (me *Me) dialPeer(addr net.Addr) (*quic.Conn, error) {
 	return me.server.Dial(me.Ctx, addr, me.tlsConfig, me.quicConfig)
 }

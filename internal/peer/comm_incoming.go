@@ -46,7 +46,7 @@ func (me *Me) Listen() {
 	}
 }
 
-func (me *Me) handleConnection(conn quic.Connection) {
+func (me *Me) handleConnection(conn *quic.Conn) {
 	stream, err := conn.AcceptStream(me.Ctx)
 	if err != nil {
 		if qerr, ok := err.(*quic.ApplicationError); !ok || qerr.ErrorCode != quic.ApplicationErrorCode(CHOKED) {
@@ -79,7 +79,7 @@ func (me *Me) handleConnection(conn quic.Connection) {
 	}
 }
 
-func (me *Me) handlePeerInfo(stream quic.Stream, addr *net.UDPAddr) error {
+func (me *Me) handlePeerInfo(stream *quic.Stream, addr *net.UDPAddr) error {
 	defer stream.Close()
 	msgLen, err := readLengthPrefix(stream)
 	if err != nil {
@@ -105,7 +105,7 @@ func (me *Me) handlePeerInfo(stream quic.Stream, addr *net.UDPAddr) error {
 	return me.peerset.Add(p)
 }
 
-func (me *Me) handleStream(stream quic.Stream) {
+func (me *Me) handleStream(stream *quic.Stream) {
 	defer stream.Close()
 
 	for {
@@ -143,7 +143,7 @@ func (me *Me) handleStream(stream quic.Stream) {
 }
 
 // readLengthPrefix extracts the message length prefix (4 bytes)
-func readLengthPrefix(stream quic.Stream) (uint32, error) {
+func readLengthPrefix(stream *quic.Stream) (uint32, error) {
 	lenBuf := make([]byte, 4)
 	_, err := io.ReadFull(stream, lenBuf)
 	if err != nil {

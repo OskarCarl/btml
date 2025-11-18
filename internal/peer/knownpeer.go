@@ -26,7 +26,7 @@ type KnownPeer struct {
 	S              trust.Score
 	LastUpdatedAge int
 	State          peerStatus
-	conn           quic.Connection
+	conn           *quic.Conn
 	telemetry      *telemetry.Client
 	structs.Peer
 	sync.Mutex
@@ -70,7 +70,7 @@ func (kp *KnownPeer) choke() error {
 	return nil
 }
 
-func (kp *KnownPeer) Send(data []byte, age int, wg *sync.WaitGroup, ctx context.Context, dial func(addr net.Addr) (quic.Connection, error)) {
+func (kp *KnownPeer) Send(data []byte, age int, wg *sync.WaitGroup, ctx context.Context, dial func(addr net.Addr) (*quic.Conn, error)) {
 	defer wg.Done()
 
 	conn := kp.getOrEstablishConnection(dial, ctx)
@@ -86,7 +86,7 @@ func (kp *KnownPeer) Send(data []byte, age int, wg *sync.WaitGroup, ctx context.
 	}
 }
 
-func (kp *KnownPeer) send(conn quic.Connection, data []byte, ctx context.Context) error {
+func (kp *KnownPeer) send(conn *quic.Conn, data []byte, ctx context.Context) error {
 	stream, err := conn.OpenStreamSync(ctx)
 	if err != nil {
 		kp.condLog("Failed to open stream", err)
@@ -113,7 +113,7 @@ func (kp *KnownPeer) send(conn quic.Connection, data []byte, ctx context.Context
 	return nil
 }
 
-func (kp *KnownPeer) getOrEstablishConnection(dial func(addr net.Addr) (quic.Connection, error), ctx context.Context) quic.Connection {
+func (kp *KnownPeer) getOrEstablishConnection(dial func(addr net.Addr) (*quic.Conn, error), ctx context.Context) *quic.Conn {
 	if kp.conn == nil {
 		kp.Lock()
 		defer kp.Unlock()
