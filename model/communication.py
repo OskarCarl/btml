@@ -1,20 +1,22 @@
 import logging
-import io
 import os
 import socket
-import pathlib
+from concurrent.futures import ThreadPoolExecutor
+from io import BytesIO
+from pathlib import Path
 
-import betterproto
-import torch
+import grpc
+from torch import load, save
 
-from training import Model
-import lib.model as pb
+from model.lib.ipc import peer_model_pb2 as messages
+from model.lib.ipc import peer_model_pb2_grpc as ipc
+from model.training import Model
 
 
 class ModelServer:
     def __init__(self, model: Model, socket_path: str):
-        self.model = model
-        self.socket_path = socket_path
+        self.model: Model = model
+        self.socket_path: str = socket_path
         self.conn: socket.socket | None = None
 
     def start(self):
@@ -22,99 +24,86 @@ class ModelServer:
         if os.path.exists(self.socket_path):
             os.unlink(self.socket_path)
 
-        server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        server.bind(self.socket_path)
-        server.listen(1)
-        logging.info(f"Listening on {self.socket_path}")
+        server = grpc.server(ThreadPoolExecutor(max_workers=1))
+        _ = server.add_insecure_port("unix://" + self.socket_path)
+
+        ipc.add_TrainServicer_to_server(TrainService(self.model), server)  # pyright: ignore[reportUnknownMemberType]
+        ipc.add_EvalServicer_to_server(EvalService(self.model), server)  # pyright: ignore[reportUnknownMemberType]
+        ipc.add_ImportWeightsServicer_to_server(ImportWeightsService(self.model), server)  # pyright: ignore[reportUnknownMemberType]
+        ipc.add_ExportWeightsServicer_to_server(ExportWeightsService(self.model), server)  # pyright: ignore[reportUnknownMemberType]
+
+        server.start()
+        logging.info("gRPC server started")
 
         while True:
-            self.conn, addr = server.accept()
             try:
-                self._handle_connection()
+                _ = server.wait_for_termination()
+            except Exception as e:
+                logging.error(f"Error when running server: {e}")
             finally:
-                self.conn.close()
+                _ = server.stop(2)
 
-    def _handle_connection(self):
-        """Handle a single connection."""
-        assert self.conn is not None
+class TrainService(ipc.TrainServicer):
+    def __init__(self, model: Model) -> None:
+        super().__init__()
+        self.model: Model = model
 
-        def _ack():
-            assert self.conn is not None
-            self.conn.sendall(betterproto.encode_varint(42))
+    def Train(self, request: messages.TrainRequest, context) -> messages.TrainResponse:  # pyright: ignore[reportImplicitOverride]
+        response = messages.TrainResponse()
+        response.loss = self.model.train()
+        response.success = True
+        return response
 
-        while True:
-            logging.info("Waiting for command")
-            # Read message length (varint)
-            buf = []
-            while True:
-                buf.append(self.conn.recv(1))
-                try:
-                    msg_len, pos = betterproto.decode_varint(b''.join(buf), 0)
-                    break
-                except IndexError:
-                    continue
+class EvalService(ipc.EvalServicer):
+    def __init__(self, model: Model) -> None:
+        super().__init__()
+        self.model: Model = model
 
-            # Read the message
-            data = b""
-            while len(data) < msg_len:
-                data += self.conn.recv(msg_len)
-                if not data:
-                    # Client has disconnected
-                    raise Exception("Client disconnected")
+    def Eval(self, request: messages.EvalRequest, context) -> messages.EvalResponse:  # pyright: ignore[reportImplicitOverride]
+        response = messages.EvalResponse()
+        accuracy, loss, guesses = self.model.test()
+        response.accuracy = accuracy
+        response.loss = loss
+        response.guesses.update(guesses)
+        response.success = True
+        if request.path:
+            model_path = f"{request.path}.pt"
+            Path(model_path).parent.mkdir(parents=True, exist_ok=True)
+            save(self.model.export_model_weights(), model_path)
+            logging.info(f"Saved model checkpoint to {model_path}")
+        return response
 
-            # Parse request
-            request = pb.ModelRequest().parse(data)
+class ImportWeightsService(ipc.ImportWeightsServicer):
+    def __init__(self, model: Model) -> None:
+        super().__init__()
+        self.model: Model = model
 
-            # Handle request
-            response = pb.ModelResponse(success=False)
-            t, values = betterproto.which_one_of(request, "request")
-            match t:
-                case "export_weights":
-                    _ack()
-                    logging.info("Exporting weights")
-                    weights_buffer = io.BytesIO()
-                    torch.save(self.model.export_model_weights(),
-                               weights_buffer)
-                    response.success = True
-                    response.weights = weights_buffer.getvalue()
+    def ImportWeights(self, request: messages.ImportRequest, context) -> messages.ImportResponse:  # pyright: ignore[reportImplicitOverride]
+        response = messages.ImportResponse()
+        try:
+            weights = load(BytesIO(request.weights))
+            self.model.import_model_weights(
+                weights,
+                request.weight_ratio
+            )
+            response.success = True
+        except Exception as e:
+            response.success = False
+            response.error_message = str(e)
+            logging.error(f"Error importing weights: {e}")
+        return response
 
-                case "import_weights":
-                    _ack()
-                    logging.info("Importing weights")
-                    try:
-                        weights = torch.load(io.BytesIO(values.weights))
-                        self.model.import_model_weights(
-                            weights,
-                            values.weight_ratio
-                        )
-                        response.success = True
-                    except Exception as e:
-                        response.success = False
-                        response.error_message = str(e)
 
-                case "train":
-                    _ack()
-                    logging.info("Training model")
-                    avg_loss = self.model.train()
-                    response.loss = avg_loss
-                    response.success = True
+class ExportWeightsService(ipc.ExportWeightsServicer):
+    def __init__(self, model: Model) -> None:
+        super().__init__()
+        self.model: Model = model
 
-                case "eval":
-                    _ack()
-                    logging.info("Evaluating model")
-                    accuracy, loss, guesses = self.model.test()
-                    response.accuracy = accuracy
-                    response.loss = loss
-                    response.guesses = guesses
-                    response.success = True
-                    # Save model weights to disk after evaluation
-                    if values.path:
-                        model_path = f"{values.path}.pt"
-                        pathlib.Path(model_path).parent.mkdir(parents=True, exist_ok=True)
-                        torch.save(self.model.export_model_weights(), model_path)
-                        logging.info(f"Saved model checkpoint to {model_path}")
-
-            # Send response with length prefix
-            response_data = bytes(response)
-            self.conn.send(betterproto.encode_varint(len(response_data)))
-            self.conn.send(response_data)
+    def ExportWeights(self, request: messages.ExportRequest, context) -> messages.ExportResponse:  # pyright: ignore[reportImplicitOverride]
+        response = messages.ExportResponse()
+        weights_buffer = BytesIO()
+        save(self.model.export_model_weights(),
+                    weights_buffer)
+        response.success = True
+        response.weights = weights_buffer.getvalue()
+        return response

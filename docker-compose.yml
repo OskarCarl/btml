@@ -76,6 +76,12 @@ services:
           action: rebuild
           ignore:
             - tracker/
+        - path: ./model/
+          action: rebuild
+          ignore:
+            - lib/
+        - path: ./protocols
+          action: rebuild
     scale: 10
     command:
       [
@@ -83,8 +89,6 @@ services:
         "-autoconf",
         "-tracker",
         "http://tracker:8080",
-        "-model",
-        "/app/model",
         "-datapath",
         "/data",
         "-logpath",
@@ -99,7 +103,7 @@ services:
     networks:
       - backend
     environment:
-      LOG_LEVEL: WARN
+      LOG_LEVEL: INFO
 
 volumes:
   influxdb-data:

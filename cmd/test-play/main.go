@@ -19,7 +19,7 @@ func main() {
 	mconf := &model.Config{
 		Name:          "42",
 		PythonRuntime: "venv/bin/python3",
-		ModelPath:     "model",
+		ModelArgs:     []string{"model/main.py"},
 		DataPath:      "data/prepared",
 		LogPath:       "",
 		Dataset:       "fMNIST",

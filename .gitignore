@@ -6,6 +6,8 @@ data/
 !data/prepared_*
 __debug*
 
+*.egg-info
+*.whl
 *.pb.go
 
 docs/diagrams/*

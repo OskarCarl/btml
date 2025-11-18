@@ -22,31 +22,25 @@ import (
 func main() {
 	var trackerURL string
 	var name string
-	var python string
-	var modelPath string
-	var datapath string
-	var logpath string
+	var dataPath string
+	var logPath string
 	var autoconf bool
 	flag.StringVar(&trackerURL, "tracker", "http://127.0.0.1:8080", "The URL of the tracker.")
 	flag.StringVar(&name, "name", "", "Name of the peer. Default is a random int(0,100).")
-	flag.StringVar(&python, "python", "python3", "Python runtime to use. Relative paths are based on the model path.")
-	flag.StringVar(&modelPath, "model", "model/", "Path where the main.py file is located.")
-	flag.StringVar(&datapath, "datapath", "data/prepared/", "Base path for the training and testing data. Relative to the model path.")
-	flag.StringVar(&logpath, "logpath", "logs/model.log", "Path for the python log file. Relative to the model path.")
+	flag.StringVar(&dataPath, "datapath", "model/data/prepared/", "Base path for the training and testing data. Relative to the model path.")
+	flag.StringVar(&logPath, "logpath", "model/logs/model.log", "Path for the python log file. Relative to the model path.")
 	flag.BoolVar(&autoconf, "autoconf", false, "Automatically configure this peer using the provided tracker.")
 	flag.Parse()
 
 	logging.FromEnv()
 	var err error
 
+	mc := model.FromEnv()
+	mc.DataPath = dataPath
+	mc.LogPath = logPath
 	c := &peer.Config{
 		TrackerURL: trackerURL,
-		ModelConf: &model.Config{
-			PythonRuntime: python,
-			ModelPath:     modelPath,
-			DataPath:      datapath,
-			LogPath:       logpath,
-		},
+		ModelConf:  mc,
 	}
 	if autoconf {
 		slog.Info("Using peer autoconfiguration", "tracker", trackerURL)

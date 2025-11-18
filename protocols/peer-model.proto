@@ -1,38 +1,58 @@
 syntax = "proto3";
 
-package model;
+package ipc;
 
 option go_package = "internal/model";
 
-// Request message sent to the model
-message ModelRequest {
-  oneof request {
-    ExportWeightsRequest export_weights = 1;
-    ImportWeightsRequest import_weights = 2;
-    TrainRequest train = 3;
-    EvalRequest eval = 4;
-  }
+
+service Train {
+	rpc Train(TrainRequest) returns (TrainResponse);
 }
 
-message ExportWeightsRequest {}
-
-message ImportWeightsRequest {
-  bytes weights = 1;  // Serialized PyTorch state dict
-  float weight_ratio = 2;
+service Eval {
+	rpc Eval(EvalRequest) returns (EvalResponse);
 }
+
+service ExportWeights {
+	rpc ExportWeights(ExportRequest) returns (ExportResponse);
+}
+
+service ImportWeights {
+	rpc ImportWeights(ImportRequest) returns (ImportResponse);
+}
+
 
 message TrainRequest {}
-
-message EvalRequest {
-  string path = 1;
+message TrainResponse {
+	bool success = 1;
+	string error_message = 2;
+	float loss = 3;
 }
 
-// Response message from the model
-message ModelResponse {
-  bool success = 1;
-  string error_message = 2;  // Only set if success = false
-  bytes weights = 3;  // Only set for export_weights response
-  float loss = 4;  // Only set for train and eval
-  float accuracy = 5;  // Only set for eval
-  map<int32, float> guesses = 6;  // Only set for eval
+message EvalRequest {
+	string path = 1;
+}
+
+message EvalResponse {
+	bool success = 1;
+	string error_message = 2;
+	float loss = 3;
+	float accuracy = 4;
+	map<int32, float> guesses = 5;
+}
+
+message ExportRequest {}
+message ExportResponse {
+	bool success = 1;
+	string error_message = 2;
+	bytes weights = 3;
+}
+
+message ImportRequest {
+	bytes weights = 1;  // Serialized PyTorch state dict
+	float weight_ratio = 2;
+}
+message ImportResponse {
+	bool success = 1;
+	string error_message = 2;
 }

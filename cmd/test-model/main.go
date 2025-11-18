@@ -14,7 +14,7 @@ func main() {
 	c := &model.Config{
 		Name:          "42",
 		PythonRuntime: "python3",
-		ModelPath:     "model/",
+		ModelArgs:     []string{"model/main.py"},
 		Dataset:       "fMNIST",
 		DataPath:      "data/prepared/",
 		LogPath:       "logs/model.log",

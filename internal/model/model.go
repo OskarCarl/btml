@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"log/slog"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +12,9 @@ import (
 	"time"
 
 	"github.com/vs-ude/btml/internal/telemetry"
+	grpc "google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // Model represents a model instance. All actions are executed in series.
@@ -130,12 +132,11 @@ func NewModel(c *Config, telemetry *telemetry.Client) (*Model, error) {
 	// Create a random socket path in /tmp
 	socketPath := filepath.Join(os.TempDir(), fmt.Sprintf("btml-model-%d.sock", time.Now().Unix()))
 
-	args := []string{
-		"main.py",
+	args := append(c.ModelArgs,
 		"--train-data", c.GetTrainDataPath(),
 		"--test-data", c.GetTestDataPath(),
 		"--socket", socketPath,
-	}
+	)
 	if c.LogPath != "" {
 		if p, err := resolveLogPath(c); err == nil {
 			args = append(args, "--log-file", p)
@@ -151,7 +152,6 @@ func NewModel(c *Config, telemetry *telemetry.Client) (*Model, error) {
 			slog.Error("Model error", "text", scanner.Text())
 		}
 	}()
-	cmd.Dir = c.ModelPath
 	return &Model{
 		client: &ModelClient{
 			cmd:        cmd,
@@ -175,26 +175,37 @@ func (m *Model) Start() error {
 	}
 
 	// Try to connect to the socket with retries
-	var conn net.Conn
+	var conn *grpc.ClientConn
 	var err error
-	for i := range 10 {
-		conn, err = net.Dial("unix", m.client.socketPath)
-		if err == nil {
+	conn, err = grpc.NewClient("unix://"+m.client.socketPath, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return fmt.Errorf("failed to create gRPC client: %w", err)
+	}
+	maxAttempts := 10
+	for i := range maxAttempts {
+		conn.Connect()
+		state := conn.GetState()
+		if state == connectivity.Ready || state == connectivity.Idle {
 			break
 		}
-		if i < 4 && i > 1 {
-			slog.Debug("No response from model", "attempt", i+2, "max_attempts", 5)
+		if i == maxAttempts {
+			m.client.cmd.Process.Kill()
+			m.client.cmd.Wait()
+			os.Remove(m.client.socketPath)
+			return fmt.Errorf("failed to connect to socket: %w", err)
+		}
+		if i > 3 {
+			slog.Debug("No response from model (yet)", "attempt", i+1, "max_attempts", maxAttempts)
 		}
 		time.Sleep(time.Second * 2)
 	}
-	if err != nil {
-		m.client.cmd.Process.Kill()
-		m.client.cmd.Wait()
-		os.Remove(m.client.socketPath)
-		return fmt.Errorf("failed to connect to socket: %w", err)
-	}
 
-	m.client.conn = conn
+	m.client.trainClient = NewTrainClient(conn)
+	m.client.evalClient = NewEvalClient(conn)
+	m.client.exportWeightsClient = NewExportWeightsClient(conn)
+	m.client.importWeightsClient = NewImportWeightsClient(conn)
+
+	slog.Info("Model process is set up and running")
 
 	return nil
 }

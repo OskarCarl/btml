@@ -7,6 +7,8 @@ DIAGRAMS = $(patsubst %.mmd,%.$(DIAGRAMS_FORMAT),$(wildcard docs/diagrams/*.mmd)
 
 all: bin/test-model bin/tracker bin/peer
 
+proto: internal/peer/model-update.pb.go internal/model/peer-model.pb.go model/lib/ipc/peer_model_pb2.py
+
 all-diagrams: $(DIAGRAMS)
 
 $(DIAGRAMS): %.$(DIAGRAMS_FORMAT):%.mmd
@@ -14,7 +16,6 @@ $(DIAGRAMS): %.$(DIAGRAMS_FORMAT):%.mmd
 	-t neutral -b transparent -f -e $(DIAGRAMS_FORMAT) -i $(notdir $(@:.$(DIAGRAMS_FORMAT)=.mmd)) -o $(notdir $@)
 
 test-model: bin/test-model
-	@$(MAKE) -C model/ test-reqs
 	docker run $(DOCKERFLAGS) $(IMAGE) bin/test-model
 
 test-go:
@@ -35,14 +36,14 @@ bin/tracker bin/peer: bin/ internal/structs/*.go internal/logging/*.go
 bin/tracker: cmd/tracker/*.go internal/tracker/*.go
 bin/peer: cmd/peer/*.go internal/peer/*.go internal/model/*.go internal/trust/*.go $(PROTOBUFS)
 
-setup-model:
-	@$(MAKE) -C model/ test-reqs
-
 internal/peer/model-update.pb.go: protocols/model-update.proto
 	protoc --go_out=. -Iprotocols/ model-update.proto
 
 internal/model/peer-model.pb.go: protocols/peer-model.proto
-	protoc --go_out=. -Iprotocols/ peer-model.proto
+	protoc --go_out=. --go-grpc_out=. -Iprotocols/ peer-model.proto
+
+model/lib/ipc/peer_model_pb2.py: model/lib/ipc/ protocols/peer-model.proto
+	python -m grpc_tools.protoc -Imodel/lib/ipc=protocols/ --python_out=. --pyi_out=. --grpc_python_out=. ./protocols/peer-model.proto
 
 prep-kernel:
 	sysctl -w net.core.rmem_max=7500000
@@ -51,13 +52,18 @@ prep-kernel:
 %/:
 	mkdir -p $@
 
+libs:
+	go mod download
+	uv sync
+
 clean: reset
-	rm -rf bin/ logs/
+	rm -rf bin/ build/ logs/* .venv/ .ruff_cache/
+	rm -rf *.egg-info *.whl **/__pycache__/
 	rm -f docs/diagrams/*.{pdf,png,svg}
-	@$(MAKE) -C model/ clean
 
 reset:
-	$(MAKE) -C model/ reset
+	rm -rf model/data/checkpoints/*
+	rm -f logs/*.log logs/*.done
 	rm -f config/tracker/.token
 
-.PHONY: clean test-go
+.PHONY: clean reset test-go proto libs

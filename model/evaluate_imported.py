@@ -1,22 +1,28 @@
-import sys
-import torch
 import logging
-from typing import List, Tuple
-
-from training import Model
-from config import DEVICE
+import sys
 import traceback
 
-def evaluate_model(model: Model) -> Tuple[List[List[float]], List[int], List[int], List[float]]:
+import torch
+from torch.types import Tensor
+
+from model.config import DEVICE
+from model.training import Model
+
+
+def evaluate_model(model: Model) -> tuple[list[list[float]], list[int], list[int], list[float]]:
     """Evaluate model on test data and return predictions, true labels, and losses"""
-    model.model.eval()
-    pred_vector_list, pred_list, true_list, loss_list = [], [], [], []
+    _ = model.model.eval()
+    pred_vector_list: list[list[float]] = []
+    pred_list: list[int] = []
+    true_list: list[int] = []
+    loss_list: list[float] = []
 
     loss_fn = torch.nn.CrossEntropyLoss(reduction='none')
     with torch.no_grad():
-        for X, y in model.test_dataloader:
-            X, y = X.to(DEVICE), y.to(DEVICE)
-            pred = model.model(X)
+        for x, y in model.test_dataloader:
+            x: Tensor = x.to(DEVICE)
+            y: Tensor = y.to(DEVICE)
+            pred: Tensor = model.model(x)
             pred_vector_list += pred.cpu().numpy().tolist()
             pred_list += pred.argmax(1).cpu().numpy().tolist()
             true_list += y.cpu().numpy().tolist()
@@ -24,7 +30,7 @@ def evaluate_model(model: Model) -> Tuple[List[List[float]], List[int], List[int
             loss_list += loss_fn(pred, y).cpu().numpy().tolist()
     return pred_vector_list, pred_list, true_list, loss_list
 
-def display_results(predictions: List[List[float]], pred_labels: List[int], true_labels: List[int], losses: List[float], limit: int = 0):
+def display_results(predictions: list[list[float]], pred_labels: list[int], true_labels: list[int], losses: list[float], limit: int = 0):
     """Display prediction results with true labels and losses"""
     correct = 0
     total = len(predictions)
