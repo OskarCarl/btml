@@ -2,7 +2,7 @@ bin/
 build/
 logs/*
 !logs/.gitkeep
-data/
+data/*
 !data/prepared_*
 __debug*
 
