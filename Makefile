@@ -1,13 +1,15 @@
 GOFLAGS ?= -trimpath
 IMAGE ?= btml-model
 DOCKERFLAGS ?= -it --rm -v ./:/app -w /app --user $(shell id -u):$(shell id -g)
-PROTOBUFS = internal/model/peer-model.pb.go internal/peer/model-update.pb.go
+GO_PROTO = internal/model/peer-model.pb.go internal/peer/model-update.pb.go
 DIAGRAMS_FORMAT ?= pdf
 DIAGRAMS = $(patsubst %.mmd,%.$(DIAGRAMS_FORMAT),$(wildcard docs/diagrams/*.mmd))
 
 all: bin/test-model bin/tracker bin/peer
 
-proto: internal/peer/model-update.pb.go internal/model/peer-model.pb.go model/lib/ipc/peer_model_pb2.py
+proto: $(GO_PROTO) model/lib/ipc/peer_model_pb2.py
+
+libs: deps proto
 
 all-diagrams: $(DIAGRAMS)
 
@@ -34,7 +36,7 @@ bin/tracker bin/peer: bin/ internal/structs/*.go internal/logging/*.go
 	go build $(GOFLAGS) -o $@ ./cmd/$(subst bin/,,$@)
 
 bin/tracker: cmd/tracker/*.go internal/tracker/*.go
-bin/peer: cmd/peer/*.go internal/peer/*.go internal/model/*.go internal/trust/*.go $(PROTOBUFS)
+bin/peer: cmd/peer/*.go internal/peer/*.go internal/model/*.go internal/trust/*.go $(GO_PROTO)
 
 internal/peer/model-update.pb.go: protocols/model-update.proto
 	protoc --go_out=. -Iprotocols/ model-update.proto
@@ -42,7 +44,7 @@ internal/peer/model-update.pb.go: protocols/model-update.proto
 internal/model/peer-model.pb.go: protocols/peer-model.proto
 	protoc --go_out=. --go-grpc_out=. -Iprotocols/ peer-model.proto
 
-model/lib/ipc/peer_model_pb2.py: model/lib/ipc/ protocols/peer-model.proto
+model/lib/ipc/peer_model_pb2.py: model/lib/ipc/ protocols/peer-model.proto .py-deps
 	python -m grpc_tools.protoc -Imodel/lib/ipc=protocols/ --python_out=. --pyi_out=. --grpc_python_out=. ./protocols/peer-model.proto
 
 prep-kernel:
@@ -52,9 +54,15 @@ prep-kernel:
 %/:
 	mkdir -p $@
 
-libs:
+deps: .go-deps .py-deps
+
+.go-deps: go.mod
 	go mod download
+	touch .go-deps
+
+.py-deps: pyproject.toml
 	uv sync
+	touch .py-deps
 
 clean: reset
 	rm -rf bin/ build/ logs/* .venv/ .ruff_cache/

@@ -15,4 +15,6 @@ docs/diagrams/*
 
 /config/tracker/.*
 
+.go-deps
+.py-deps
 docker-compose.override.yml

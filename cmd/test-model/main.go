@@ -15,14 +15,19 @@ func main() {
 		Name:          "42",
 		PythonRuntime: "python3",
 		ModelArgs:     []string{"model/main.py"},
-		Dataset:       "fMNIST",
-		DataPath:      "data/prepared/",
+		Dataset:       "prepared_fMNIST",
+		DataPath:      "data/",
 		LogPath:       "logs/model.log",
 	}
 	// Create a new model instance
 	m, err := model.NewModel(c, nil)
 	if err != nil {
 		slog.Error("Failed to create model", "error", err)
+		os.Exit(1)
+	}
+	err = m.Start()
+	if err != nil {
+		slog.Error("Failed to start model", "error", err)
 		os.Exit(1)
 	}
 	// Ensure cleanup on exit

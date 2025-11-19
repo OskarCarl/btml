@@ -16,15 +16,15 @@ import (
 func main() {
 	logging.FromEnv()
 
-	mconf := &model.Config{
+	c := &model.Config{
 		Name:          "42",
-		PythonRuntime: "venv/bin/python3",
+		PythonRuntime: "python3",
 		ModelArgs:     []string{"model/main.py"},
-		DataPath:      "data/prepared",
+		Dataset:       "prepared_fMNIST",
+		DataPath:      "data/",
 		LogPath:       "",
-		Dataset:       "fMNIST",
 	}
-	mod, err := model.NewModel(mconf, nil)
+	mod, err := model.NewModel(c, nil)
 	if err != nil {
 		slog.Error("Failed to create model", "error", err)
 		os.Exit(1)

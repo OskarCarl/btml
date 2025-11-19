@@ -27,8 +27,6 @@ reportAny=false
 [build-system]
 requires = ["uv_build>=0.9.6,<0.10.0"]
 build-backend = "uv_build"
-# requires = ["setuptools", "setuptools-scm"]
-# build-backend = "setuptools.build_meta"
 
 [tool.uv.build-backend]
 module-name = "model"
@@ -39,11 +37,3 @@ wheel-exclude = [".git*", "Dockerfile", "Makefile", "*/data", "*/logs", "*/tools
 [tool.setuptools]
 packages = ["model", "model.lib.ipc"]
 include-package-data = false
-
-# [tool.setuptools.packages.find]
-# where = ["."]
-# include = ["model*"]
-# namespaces = false
-
-# [tool.setuptools.exclude-package-data]
-# model = ["data", "tools", "Makefile", "Dockerfile"]
