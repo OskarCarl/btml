@@ -84,8 +84,12 @@ func getResponseBody(resp *http.Response) (*[]byte, error) {
 
 // periodicUpdate periodically updates the peer list from the tracker.
 // This has the side effect of pinging the tracker so it knows we are alive.
+// An UpdateFreq of 0 or less disables the updates.
 func (t *Tracker) periodicUpdate(wg *sync.WaitGroup, ctx context.Context) {
 	defer wg.Done()
+	if t.UpdateFreq < 1 {
+		return
+	}
 	timer := time.NewTimer(time.Second)
 	errCount := 0
 	waitTime := t.UpdateFreq

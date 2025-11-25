@@ -4,7 +4,7 @@ import "log/slog"
 
 type ApplyStrategy interface {
 	SetModel(model *Model)
-	Start(<-chan Weights) error
+	Start(<-chan *Weights) error
 }
 
 type NaiveStrategy struct {

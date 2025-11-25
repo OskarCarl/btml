@@ -22,7 +22,9 @@ func (me *Me) Outgoing() {
 		case data := <-me.data.outgoingChan:
 			wg.Wait() // We wait here so the application can be stopped at any time
 			me.pds.Store(*data)
-			me.telemetry.RecordOnline(data.GetAge())
+			if me.telemetry != nil {
+				me.telemetry.RecordOnline(data.GetAge())
+			}
 			bytes, err := marshalUpdate(data, me.config.Name)
 			if err != nil {
 				slog.Warn("Failed marshaling model update", "error", err)

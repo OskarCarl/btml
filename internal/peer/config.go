@@ -25,9 +25,9 @@ import (
 type Config struct {
 	Name        string
 	TrackerURL  string
-	UpdateFreq  time.Duration
+	UpdateFreq  time.Duration // Any value < 1 means off
 	ModelConf   *model.Config
-	Addr        string
+	Addr        string // Omitting ip means 'all interfaces' while omitting the port means 'random'
 	PeersetSize int
 	TelConf     *telemetry.TelemetryConf
 }

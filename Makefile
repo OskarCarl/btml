@@ -26,11 +26,16 @@ test-go:
 test-tracker: bin/tracker
 	bin/tracker -config config/tracker/config.toml
 
-test-peer: bin/peer setup-model
-	bin/peer -autoconf -python venv/bin/python
+test-peer: bin/test-peer
+	./bin/test-peer -name a -port 8000 -peers localhost:8001,localhost:8001 &
+	./bin/test-peer -name b -port 8001 -peers localhost:8000,localhost:8002 &
+	./bin/test-peer -name c -port 8002 -peers localhost:8000,localhost:8001
 
 bin/test-model: bin/ cmd/test-model/*.go internal/model/*.go internal/model/peer-model.pb.go
 	go build $(GOFLAGS) -o bin/test-model ./cmd/test-model
+
+bin/test-peer: bin/ cmd/test-peer/*.go internal/peer/*.go
+	go build $(GOFLAGS) -o bin/test-peer ./cmd/test-peer
 
 bin/tracker bin/peer: bin/ internal/structs/*.go internal/logging/*.go
 	go build $(GOFLAGS) -o $@ ./cmd/$(subst bin/,,$@)
