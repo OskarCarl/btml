@@ -1,0 +1,17 @@
+---
+config:
+  layout: elk
+---
+stateDiagram
+  direction TB
+  state add_choice <<choice>>
+  state choke_choice <<choice>>
+  [*] --> add_choice:Add()
+  add_choice --> active:space >= 1
+  add_choice --> known:space < 1
+  known --> active:Unchoke()
+  active --> choke_choice:Choke()
+  choke_choice --> known:recently active
+  choke_choice --> archived:not recently active
+  archived --> add_choice:Add()
+  note right of active : Peers in the active set are also known

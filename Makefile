@@ -11,7 +11,7 @@ proto: $(GO_PROTO) model/lib/ipc/peer_model_pb2.py
 
 libs: deps proto
 
-all-diagrams: $(DIAGRAMS)
+docs: $(DIAGRAMS)
 
 $(DIAGRAMS): %.$(DIAGRAMS_FORMAT):%.mmd
 	docker run --rm -u $(shell id -u):$(shell id -g) -v ./docs/diagrams:/data ghcr.io/mermaid-js/mermaid-cli/mermaid-cli \
