@@ -68,10 +68,6 @@ func NewMe(config *Config, telemetry *telemetry.Client, p *structs.Peer) *Me {
 
 func (me *Me) Setup() {
 	_, port, err := net.SplitHostPort(me.config.Addr)
-	if err != nil {
-		slog.Error("Given address is not valid", "error", err)
-		panic(err)
-	}
 	if port == "" {
 		me.config.Addr += ":0"
 	}
