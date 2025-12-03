@@ -94,14 +94,10 @@ func manualPeerSet(list string) *peer.PeerSet {
 			slog.Error("Failed to resolve address", "err", err)
 			continue
 		}
-		kp := peer.NewKnownPeer(
-			&structs.Peer{
-				Name: p,
-				Addr: addr,
-			},
-			nil,
-		)
-		ps.Active[p] = kp
+		ps.Add(&structs.Peer{
+			Name: p,
+			Addr: addr,
+		})
 	}
 	return ps
 }

@@ -7,6 +7,14 @@ var (
 	MinScore Score = 0
 )
 
+func (s *Score) Update(change int) {
+	if change > 0 {
+		s.Increment(change)
+	} else {
+		s.Decrement(-change)
+	}
+}
+
 // Increments the Score up to a ceiling of MaxScore
 func (s *Score) Increment(i int) {
 	*s = min(*s+Score(i), MaxScore)

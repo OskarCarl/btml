@@ -1,10 +1,14 @@
 package peer
 
 import (
+	"container/list"
 	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"slices"
+	"sort"
+	"sync"
 
 	"github.com/vs-ude/btml/internal/structs"
 	"github.com/vs-ude/btml/internal/telemetry"
@@ -13,106 +17,152 @@ import (
 type ErrPeerInactive error
 
 type PeerSet struct {
-	Active      map[string]*KnownPeer // subset of Known
-	Known       map[string]*KnownPeer
-	MaxSize     int
-	SoftMaxSize int
-	telemetry   *telemetry.Client
+	unchoked       map[string]*KnownPeer // subset of known
+	known          map[string]*KnownPeer
+	maxSize        int
+	softMaxSize    int
+	orderedByScore *list.List
+	telemetry      *telemetry.Client
+	sync.Mutex
 }
 
 func NewPeerSet(size int, telemetry *telemetry.Client) *PeerSet {
 	return &PeerSet{
-		Active:      make(map[string]*KnownPeer, size),
-		Known:       make(map[string]*KnownPeer),
-		MaxSize:     size,
-		SoftMaxSize: int(math.Round(float64(size) / 3 * 2)),
-		telemetry:   telemetry,
+		unchoked:       make(map[string]*KnownPeer, size),
+		known:          make(map[string]*KnownPeer),
+		maxSize:        size,
+		softMaxSize:    int(math.Round(float64(size) / 3 * 2)),
+		orderedByScore: list.New(),
+		telemetry:      telemetry,
 	}
 }
 
 func (ps *PeerSet) Add(p *structs.Peer) error {
+	ps.Lock()
+	defer ps.Unlock()
 	switch status, err := ps.CheckPeer(p); {
 	case err != nil:
 		return err
 	case status == CHOKED:
-		ps.Known[p.Name].Update(p)
+		ps.known[p.Name].Update(p)
 		if ps.Space() > 0 {
 			ps.Unchoke(p.Name)
 			return nil
 		}
 		return fmt.Errorf("peer is known and choked")
 	case status == UNCHOKED:
-		ps.Known[p.Name].Update(p)
+		ps.known[p.Name].Update(p)
 	case status == UNKNOWN:
-		ps.Known[p.Name] = NewKnownPeer(p, ps.telemetry)
+		ps.known[p.Name] = NewKnownPeer(p, ps.telemetry)
+		ps.known[p.Name].updateScorePropagationFunc = ps.UpdateScore
+		ps.orderedByScore.PushBack(ps.known[p.Name])
 		if ps.Space() > 0 {
-			ps.Unchoke(p.Name)
+			ps.unchoke(p.Name)
 		}
 	}
 	return nil
 }
 
+func (ps *PeerSet) GetUnchoked() map[string]*KnownPeer {
+	return ps.known
+}
+
+// Len returns the number of known peers in the set.
+func (ps *PeerSet) Len() int {
+	return len(ps.known)
+}
+
+// UnchokedLen returns the number of unchoked peers in the set.
+func (ps *PeerSet) UnchokedLen() int {
+	return len(ps.unchoked)
+}
+
+// Space returns the number of open slots that are left in the set, based on
+// the hard limit.
+func (ps *PeerSet) Space() int {
+	return ps.maxSize - len(ps.unchoked)
+}
+
+// GetWorstUnchoked searches for the n worst unchoked peers by score. The
+// returned list is sorted by score in ascending order.
+// If n > len(ps.Active), it returns all active peers.
+func (ps *PeerSet) GetWorstUnchoked(n int) []*KnownPeer {
+	keys := make([]*KnownPeer, 0, min(n, len(ps.unchoked)))
+	for p := range maps.Values(ps.unchoked) {
+		keys = append(keys, p)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i].score < keys[j].score
+	})
+	return keys[:min(n, len(keys))]
+}
+
+// GetBestChoked searches for the n best choked peers by score. The
+// returned list is sorted by score in descending order.
+// Returns at most all choked peers, if their amount is <= n.
+func (ps *PeerSet) GetBestChoked(n int) []*KnownPeer {
+	keys := make([]*KnownPeer, 0, n)
+	for e := ps.orderedByScore.Front(); e != nil && len(keys) < n; e = e.Next() {
+		if e.Value.(*KnownPeer).State == CHOKED {
+			keys = append(keys, e.Value.(*KnownPeer))
+		}
+	}
+	return keys
+}
+
 // MultiChoke chokes the n worst-scoring peers.
 // Overwrites peers in the Choked set if necessary.
-// func (ps *PeerSet) MultiChoke(n int) {
-// 	if n > len(ps.Active) {
-// 		maps.Copy(ps.Choked, ps.Active)
-// 		clear(ps.Active)
-// 	}
-
-// 	lowest := ps.GetWorstUnchoked(n)
-// 	for _, p := range lowest {
-// 		ps.Choke(p)
-// 	}
-// }
-
-// Choke adds the given peer to the choke set and removes it from the active
-// set.
-func (ps *PeerSet) Choke(p string) {
-	ps.Known[p].choke()
-	delete(ps.Active, p)
-}
-
-func (ps *PeerSet) GetWorstUnchoked(n int) []string {
-	keys := make([]string, 0, len(ps.Active))
-	for k := range ps.Active {
-		keys = append(keys, k)
+func (ps *PeerSet) MultiChoke(n int) {
+	ps.Lock()
+	defer ps.Unlock()
+	for _, p := range ps.GetWorstUnchoked(n) {
+		ps.choke(p.Name)
 	}
-	slices.SortStableFunc(keys, func(a, b string) int {
-		return int(ps.Active[a].S - ps.Active[b].S) // sorts lowest to highest
-	})
-	return keys[:n]
 }
 
+// Choke a single peer by name.
+func (ps *PeerSet) Choke(p string) {
+	ps.Lock()
+	defer ps.Unlock()
+	ps.choke(p)
+}
+
+func (ps *PeerSet) choke(p string) {
+	ps.known[p].choke()
+	delete(ps.unchoked, p)
+}
+
+// Unchoke a single peer by name.
 func (ps *PeerSet) Unchoke(p string) error {
-	if _, ok := ps.Active[p]; ok {
+	ps.Lock()
+	defer ps.Unlock()
+	return ps.unchoke(p)
+}
+
+func (ps *PeerSet) unchoke(p string) error {
+	if _, ok := ps.unchoked[p]; ok {
 		return nil
 	}
-	if len(ps.Active) == ps.MaxSize {
+	if len(ps.unchoked) == ps.maxSize {
 		return errors.New("max amount of unchoked peers reached")
 	}
-	ps.Active[p] = ps.Known[p]
-	ps.Active[p].unchoke()
+	ps.unchoked[p] = ps.known[p]
+	ps.unchoked[p].unchoke()
 
-	return nil
-}
-
-func (ps *PeerSet) GetBestChoked(n int) []string {
-	// TODO: implement
 	return nil
 }
 
 // CheckPeer verifies whether the given peer is new or if it is a legitimate replacement for a known one.
 func (ps *PeerSet) CheckPeer(new *structs.Peer) (peerStatus, error) {
-	if _, ok := ps.Active[new.Name]; ok {
+	if _, ok := ps.unchoked[new.Name]; ok {
 		// TODO: properly verify the fingerprint
-		if ps.Known[new.Name].Fingerprint == new.Fingerprint {
+		if ps.known[new.Name].Fingerprint == new.Fingerprint {
 			return UNCHOKED, nil
 		} else {
 			return ERR, fmt.Errorf("unchoked peer exists and the new one has a non-matching fingerprint")
 		}
 	}
-	if p, ok := ps.Known[new.Name]; ok {
+	if p, ok := ps.known[new.Name]; ok {
 		// TODO: properly verify the fingerprint and check the score
 		if p.Fingerprint == new.Fingerprint {
 			return CHOKED, nil
@@ -123,15 +173,45 @@ func (ps *PeerSet) CheckPeer(new *structs.Peer) (peerStatus, error) {
 	return UNKNOWN, nil
 }
 
-func (ps *PeerSet) ActiveToString() []string {
-	keys := make([]string, 0, len(ps.Active))
-	for k := range ps.Active {
+// UpdateScore updates the internal data structures to reflect the new score of a peer.
+func (ps *PeerSet) UpdateScore(kp *KnownPeer) error {
+	ps.Lock()
+	defer ps.Unlock()
+	return ps.updateScore(kp)
+}
+
+func (ps *PeerSet) updateScore(kp *KnownPeer) error {
+	var kp_element *list.Element
+	var mark *list.Element
+	found_kp, found_mark := false, false
+	for e := ps.orderedByScore.Front(); e != nil && !(found_kp && found_mark); e = e.Next() {
+		if e.Value.(*KnownPeer).Name == kp.Name {
+			kp_element = e
+			found_kp = true
+			continue
+		}
+		if e.Value.(*KnownPeer).score < kp.score {
+			found_mark = true
+		} else {
+			mark = e
+		}
+	}
+	if kp_element == nil {
+		return fmt.Errorf("peer not found")
+	}
+	if mark != nil {
+		ps.orderedByScore.MoveAfter(kp_element, mark)
+	} else {
+		ps.orderedByScore.MoveToFront(kp_element)
+	}
+	return nil
+}
+
+func (ps *PeerSet) UnchokedToString() []string {
+	keys := make([]string, 0, len(ps.unchoked))
+	for k := range ps.unchoked {
 		keys = append(keys, k)
 	}
 	slices.Sort(keys)
 	return keys
-}
-
-func (ps *PeerSet) Space() int {
-	return ps.MaxSize - len(ps.Active)
 }

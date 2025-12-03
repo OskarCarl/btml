@@ -23,23 +23,24 @@ const (
 )
 
 type KnownPeer struct {
-	S              trust.Score
-	LastUpdatedAge int
-	State          peerStatus
-	conn           *quic.Conn
-	telemetry      *telemetry.Client
+	score                      trust.Score
+	LastSentUpdateAge          int
+	State                      peerStatus
+	conn                       *quic.Conn
+	telemetry                  *telemetry.Client
+	updateScorePropagationFunc func(*KnownPeer) error
 	structs.Peer
 	sync.Mutex
 }
 
 func NewKnownPeer(p *structs.Peer, telemetry *telemetry.Client) *KnownPeer {
 	return &KnownPeer{
-		S:              0,
-		LastUpdatedAge: 0,
-		State:          CHOKED,
-		conn:           nil,
-		telemetry:      telemetry,
-		Peer:           *p.Copy(),
+		score:             0,
+		LastSentUpdateAge: 0,
+		State:             CHOKED,
+		conn:              nil,
+		telemetry:         telemetry,
+		Peer:              *p.Copy(),
 	}
 }
 
@@ -48,6 +49,20 @@ func (kp *KnownPeer) Update(p *structs.Peer) {
 		kp.closeConn("addr change")
 		kp.Addr = p.Addr
 	}
+}
+
+func (kp *KnownPeer) UpdateScore(change int) {
+	kp.score.Update(change)
+	if kp.updateScorePropagationFunc != nil {
+		err := kp.updateScorePropagationFunc(kp)
+		if err != nil {
+			slog.Warn("error during score update propagation", "error", err)
+		}
+	}
+}
+
+func (kp *KnownPeer) GetScore() trust.Score {
+	return kp.score
 }
 
 func (kp *KnownPeer) closeConn(reason string) {
@@ -79,7 +94,7 @@ func (kp *KnownPeer) Send(data []byte, age int, wg *sync.WaitGroup, ctx context.
 	}
 	err := kp.send(conn, data, ctx)
 	if err == nil {
-		kp.LastUpdatedAge = age
+		kp.LastSentUpdateAge = age
 		if kp.telemetry != nil {
 			kp.telemetry.RecordSend(age, kp.Name)
 		}

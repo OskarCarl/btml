@@ -41,7 +41,7 @@ func NewDoubleAgeStorage(lastN int, stepSizeCap int) *DoubleAgeStorage {
 }
 
 func (h *DoubleAgeStorage) Decide(p *KnownPeer, w *model.Weights) (bool, error) {
-	if w.GetAge() > 4 && p.LastUpdatedAge < (w.GetAge()/2) {
+	if w.GetAge() > 4 && p.LastSentUpdateAge < (w.GetAge()/2) {
 		return false, nil
 	}
 	return true, nil

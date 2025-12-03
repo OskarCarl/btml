@@ -1,18 +1,10 @@
-package peer_test
+package peer
 
 import (
 	"testing"
 
 	"github.com/vs-ude/btml/internal/model"
-	"github.com/vs-ude/btml/internal/peer"
 )
-
-func TestPrintStorage(t *testing.T) {
-	d := prepareDoubleAgeStorage()
-	t.Log(d)
-	d = preparePartialDoubleAgeStorage()
-	t.Log(d)
-}
 
 func TestDoubleAgeStorageLast(t *testing.T) {
 	// prepare
@@ -82,8 +74,8 @@ func TestPartialDoubleAgeStorage(t *testing.T) {
 	}
 }
 
-func prepareDoubleAgeStorage() peer.StorageStrategy {
-	d := peer.NewDoubleAgeStorage(3, 6)
+func prepareDoubleAgeStorage() StorageStrategy {
+	d := NewDoubleAgeStorage(3, 6)
 
 	for a := range 22 {
 		d.Store(*model.NewWeights(make([]byte, 0), a))
@@ -92,8 +84,8 @@ func prepareDoubleAgeStorage() peer.StorageStrategy {
 	return d
 }
 
-func preparePartialDoubleAgeStorage() peer.StorageStrategy {
-	d := peer.NewDoubleAgeStorage(3, 6)
+func preparePartialDoubleAgeStorage() StorageStrategy {
+	d := NewDoubleAgeStorage(3, 6)
 
 	for a := range 3 {
 		d.Store(*model.NewWeights(make([]byte, 0), a))
@@ -102,7 +94,7 @@ func preparePartialDoubleAgeStorage() peer.StorageStrategy {
 	return d
 }
 
-func retrieve(t *testing.T, d peer.StorageStrategy, min int) int {
+func retrieve(t *testing.T, d StorageStrategy, min int) int {
 	w, err := d.Retrieve(min)
 	if err != nil {
 		t.Errorf("error retrieving weights for %d: %v", min, err)

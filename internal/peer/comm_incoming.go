@@ -66,7 +66,7 @@ func (me *Me) handleConnection(conn *quic.Conn) {
 		conn.CloseWithError(0, "closed")
 	}()
 	if me.telemetry != nil {
-		me.telemetry.RecordActivePeers(me.peerset.ActiveToString())
+		me.telemetry.RecordActivePeers(me.peerset.UnchokedToString())
 	}
 	for {
 		stream, err = conn.AcceptStream(me.Ctx)

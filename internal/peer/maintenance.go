@@ -38,6 +38,6 @@ func (me *Me) UpdatePeerset() {
 
 func (me *Me) sendTelemetry() {
 	if me.telemetry != nil {
-		me.telemetry.RecordActivePeers(me.peerset.ActiveToString())
+		me.telemetry.RecordActivePeers(me.peerset.UnchokedToString())
 	}
 }

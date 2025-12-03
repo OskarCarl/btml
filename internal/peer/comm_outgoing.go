@@ -30,7 +30,7 @@ func (me *Me) Outgoing() {
 				slog.Warn("Failed marshaling model update", "error", err)
 				continue
 			}
-			for _, peer := range me.peerset.Active {
+			for _, peer := range me.peerset.GetUnchoked() {
 				if distribute, _ := me.pds.Decide(peer, data); !distribute {
 					continue
 				}
@@ -56,8 +56,8 @@ func (me *Me) LaggingPeersLoop() {
 			return
 		case <-timer.C:
 			wg.Wait() // We wait here so the application can be stopped at any time
-			for _, peer := range me.peerset.Active {
-				if data, err = me.pds.Retrieve(peer.LastUpdatedAge); err != nil {
+			for _, peer := range me.peerset.GetUnchoked() {
+				if data, err = me.pds.Retrieve(peer.LastSentUpdateAge); err != nil {
 					slog.Debug("Did not get data for peer", "peer", peer.Name, "error", err)
 					continue
 				}

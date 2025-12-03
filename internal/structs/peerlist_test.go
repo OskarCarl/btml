@@ -1,11 +1,9 @@
-package structs_test
+package structs
 
 import (
 	"net"
 	"testing"
 	"time"
-
-	s "github.com/vs-ude/btml/internal/structs"
 )
 
 func TestMashallingReverse(t *testing.T) {
@@ -17,7 +15,7 @@ func TestMashallingReverse(t *testing.T) {
 	if err != nil {
 		t.Error("unable to Marshal peerlist")
 	}
-	output := new(s.Peerlist)
+	output := new(Peerlist)
 	err = output.Unmarshal(b)
 	if err != nil {
 		t.Error("unable to Unmarshal peerlist")
@@ -53,32 +51,32 @@ func TestUnmarshalShouldError(t *testing.T) {
 	}
 }
 
-func buildInput() *s.Peerlist {
+func buildInput() *Peerlist {
 	addr1, _ := net.ResolveUDPAddr("udp", ":43439")
 	addr2, _ := net.ResolveUDPAddr("udp", "localhost:62123")
 	time1, _ := time.Parse("yyyy-mm-dd hh:mm", "1999-12-31 23:59")
 	time2, _ := time.Parse("yyyy-mm-dd hh:mm", "2000-01-01 00:00")
-	a := &s.Peer{
+	a := &Peer{
 		Name:        "a",
 		Addr:        addr1,
 		Fingerprint: "akljsdh",
 		LastSeen:    time1,
 	}
-	b := &s.Peer{
+	b := &Peer{
 		Name:        "b",
 		Addr:        addr2,
 		Fingerprint: "lkjajf",
 		LastSeen:    time2,
 	}
-	return &s.Peerlist{
-		List: map[string]*s.Peer{
+	return &Peerlist{
+		List: map[string]*Peer{
 			"a": a,
 			"b": b,
 		},
 	}
 }
 
-func equal(t *testing.T, a, b *s.Peer) bool {
+func equal(t *testing.T, a, b *Peer) bool {
 	ret := true
 	if a.Name != b.Name {
 		t.Logf("Names do not match: %s != %s", a.Name, b.Name)
