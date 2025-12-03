@@ -3,6 +3,7 @@ package peer
 import (
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/vs-ude/btml/internal/structs"
@@ -108,7 +109,7 @@ func TestGetBestChoked(t *testing.T) {
 }
 
 func buildPeerSet(length int) *PeerSet {
-	ps := NewPeerSet(length, nil)
+	ps := NewPeerSet(length, time.Hour, nil)
 
 	for i := range length {
 		ps.Add(&structs.Peer{Name: "peer" + strconv.Itoa(i)})

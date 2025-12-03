@@ -87,7 +87,7 @@ func dummySend(p *peer.Me) {
 
 func manualPeerSet(list string) *peer.PeerSet {
 	l := strings.Split(list, ",")
-	ps := peer.NewPeerSet(len(list), nil)
+	ps := peer.NewPeerSet(len(list), time.Hour, nil)
 	for _, p := range l {
 		addr, err := net.ResolveUDPAddr("udp", p)
 		if err != nil {

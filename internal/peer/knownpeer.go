@@ -19,6 +19,7 @@ const (
 	ERR peerStatus = iota
 	UNCHOKED
 	CHOKED
+	ARCHIVED
 	UNKNOWN
 )
 

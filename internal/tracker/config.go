@@ -15,8 +15,10 @@ type Config struct {
 		MaxReturnPeers   int           `toml:"max_return_peers"`
 	} `toml:"tracker"`
 	Peer struct {
-		Dataset    string        `toml:"dataset"`
-		UpdateFreq time.Duration `toml:"update_freq"`
+		Dataset             string        `toml:"dataset"`
+		UpdateFreq          time.Duration `toml:"update_freq"`
+		PeerSetSize         int           `toml:"peer_set_size"`
+		PeerSetArchiveAfter time.Duration `toml:"peer_set_archive_after"`
 	} `toml:"peer"`
 	TelConf     *telemetry.TelemetryConf `toml:"telemetry"`
 	GrafanaConf *telemetry.GrafanaConf   `toml:"grafana"`

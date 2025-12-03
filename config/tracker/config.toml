@@ -7,6 +7,8 @@ max_return_peers = 10
 [peer]
 dataset = "prepared_fMNIST"
 update_freq = "30s"
+peer_set_size = 5
+peer_set_archive_after = "2m"
 
 [telemetry]
 url = "http://influx:8181"

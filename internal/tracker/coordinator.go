@@ -28,10 +28,12 @@ func (t *Tracker) initPeer(w http.ResponseWriter, r *http.Request) {
 	}
 	host, _, _ := net.SplitHostPort(r.RemoteAddr)
 	who := structs.WhoAmI{
-		Id:         i,
-		Dataset:    t.conf.Peer.Dataset,
-		UpdateFreq: t.conf.Peer.UpdateFreq,
-		ExtIp:      host,
+		Id:                  i,
+		Dataset:             t.conf.Peer.Dataset,
+		UpdateFreq:          t.conf.Peer.UpdateFreq,
+		PeerSetSize:         t.conf.Peer.PeerSetSize,
+		PeerSetArchiveAfter: t.conf.Peer.PeerSetArchiveAfter,
+		ExtIp:               host,
 	}
 	if t.telemetry.enabled {
 		who.Telemetry = *t.conf.TelConf

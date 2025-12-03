@@ -23,13 +23,14 @@ import (
 )
 
 type Config struct {
-	Name        string
-	TrackerURL  string
-	UpdateFreq  time.Duration // Any value < 1 means off
-	ModelConf   *model.Config
-	Addr        string // Omitting ip means 'all interfaces' while omitting the port means 'random'
-	PeersetSize int
-	TelConf     *telemetry.TelemetryConf
+	Name                string
+	TrackerURL          string
+	UpdateFreq          time.Duration // Any value < 1 means off
+	ModelConf           *model.Config
+	Addr                string // Omitting ip means 'all interfaces' while omitting the port means 'random'
+	PeerSetSize         int
+	PeerSetArchiveAfter time.Duration // Time after last contact, when a peer should be considered gone
+	TelConf             *telemetry.TelemetryConf
 }
 
 func Autoconf(c *Config) error {
@@ -61,7 +62,8 @@ func Autoconf(c *Config) error {
 	c.UpdateFreq = whoami.UpdateFreq
 	c.ModelConf.Dataset = whoami.Dataset
 	c.ModelConf.Name = c.Name
-	c.PeersetSize = 5 // TODO make configurable
+	c.PeerSetSize = whoami.PeerSetSize
+	c.PeerSetArchiveAfter = whoami.PeerSetArchiveAfter
 	c.TelConf = &whoami.Telemetry
 
 	return nil

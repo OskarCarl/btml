@@ -25,7 +25,7 @@ func Start(c *Config, m *model.Model, t *telemetry.Client) *Me {
 	}
 	me.tracker.Setup(c, self)
 
-	me.peerset = NewPeerSet(c.PeersetSize, me.telemetry)
+	me.peerset = NewPeerSet(c.PeerSetSize, c.PeerSetArchiveAfter, me.telemetry)
 	me.Wg.Add(1)
 	go me.Listen()
 

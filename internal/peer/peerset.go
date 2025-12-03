@@ -9,6 +9,7 @@ import (
 	"slices"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/vs-ude/btml/internal/structs"
 	"github.com/vs-ude/btml/internal/telemetry"
@@ -19,19 +20,23 @@ type ErrPeerInactive error
 type PeerSet struct {
 	unchoked       map[string]*KnownPeer // subset of known
 	known          map[string]*KnownPeer
+	archive        map[string]*KnownPeer
 	maxSize        int
 	softMaxSize    int
+	archiveAfter   time.Duration
 	orderedByScore *list.List
 	telemetry      *telemetry.Client
 	sync.Mutex
 }
 
-func NewPeerSet(size int, telemetry *telemetry.Client) *PeerSet {
+func NewPeerSet(size int, archiveAfter time.Duration, telemetry *telemetry.Client) *PeerSet {
 	return &PeerSet{
 		unchoked:       make(map[string]*KnownPeer, size),
 		known:          make(map[string]*KnownPeer),
+		archive:        make(map[string]*KnownPeer),
 		maxSize:        size,
 		softMaxSize:    int(math.Round(float64(size) / 3 * 2)),
+		archiveAfter:   archiveAfter,
 		orderedByScore: list.New(),
 		telemetry:      telemetry,
 	}
@@ -120,7 +125,8 @@ func (ps *PeerSet) MultiChoke(n int) {
 	}
 }
 
-// Choke a single peer by name.
+// Choke a single peer by name. If there was no contact with the peer in the
+// last `PeerSet.archiveAfter` duration, it is archived.
 func (ps *PeerSet) Choke(p string) {
 	ps.Lock()
 	defer ps.Unlock()
@@ -130,6 +136,11 @@ func (ps *PeerSet) Choke(p string) {
 func (ps *PeerSet) choke(p string) {
 	ps.known[p].choke()
 	delete(ps.unchoked, p)
+	if ps.known[p].LastSeen.Before(time.Now().Add(-ps.archiveAfter)) {
+		ps.archive[p] = ps.known[p]
+		ps.archive[p].State = ARCHIVED
+		delete(ps.known, p)
+	}
 }
 
 // Unchoke a single peer by name.
@@ -168,6 +179,13 @@ func (ps *PeerSet) CheckPeer(new *structs.Peer) (peerStatus, error) {
 			return CHOKED, nil
 		} else {
 			return ERR, fmt.Errorf("choked peer exists and the new one has a non-matching fingerprint")
+		}
+	}
+	if p, ok := ps.archive[new.Name]; ok {
+		if p.Fingerprint == new.Fingerprint {
+			return ARCHIVED, nil
+		} else {
+			return ERR, fmt.Errorf("archived peer exists and the new one has a non-matching fingerprint")
 		}
 	}
 	return UNKNOWN, nil
