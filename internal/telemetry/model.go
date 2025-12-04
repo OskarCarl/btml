@@ -45,13 +45,14 @@ func (c *Client) RecordEvaluation(accuracy, loss float32, guesses map[int32]floa
 	}
 }
 
-func (c *Client) RecordWeightApplication(localAge, remoteAge int) {
+func (c *Client) RecordWeightApplication(localAge, remoteAge int, change float32) {
 	point := influxdb3.NewPoint(
 		fmt.Sprintf("weight_application_%s", c.run),
 		c.tags,
 		map[string]any{
 			"local_age":  localAge,
 			"remote_age": remoteAge,
+			"change":     change,
 		},
 		time.Now(),
 	)

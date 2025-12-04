@@ -16,9 +16,9 @@ import (
 )
 
 type storage struct {
-	incomingChan    chan *model.Weights
-	outgoingChan    chan *model.Weights
-	outgoingStorage map[int]*model.Weights
+	incomingChan    chan *model.WeightsWithCallback
+	outgoingChan    chan *structs.Weights
+	outgoingStorage map[int]*structs.Weights
 	incMutex        sync.Mutex
 }
 
@@ -58,9 +58,9 @@ func NewMe(config *Config, telemetry *telemetry.Client, p *structs.Peer) *Me {
 		quicConfig: generateQUICConfig(),
 		tlsConfig:  generateTLSConfig(),
 		data: storage{
-			incomingChan:    make(chan *model.Weights, 10),
-			outgoingChan:    make(chan *model.Weights, 5),
-			outgoingStorage: make(map[int]*model.Weights),
+			incomingChan:    make(chan *model.WeightsWithCallback, 10),
+			outgoingChan:    make(chan *structs.Weights, 5),
+			outgoingStorage: make(map[int]*structs.Weights),
 		},
 		telemetry: telemetry,
 	}
@@ -89,13 +89,13 @@ func (me *Me) Setup() {
 	slog.Info("QUIC listener started", "addr", me.localAddr.String())
 }
 
-func (me *Me) Send(w *model.Weights) {
+func (me *Me) Send(w *structs.Weights) {
 	me.data.outgoingChan <- w
 }
 
 // ListenForWeights listens for incoming weights and returns a channel to
 // receive them. Can only be called once, subsequent calls will return an error.
-func (me *Me) ListenForWeights() (<-chan *model.Weights, error) {
+func (me *Me) ListenForWeights() (<-chan *model.WeightsWithCallback, error) {
 	ok := me.data.incMutex.TryLock()
 	if !ok {
 		return nil, errors.New("someone is already listening for incoming weights")

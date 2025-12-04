@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/quic-go/quic-go"
-	"github.com/vs-ude/btml/internal/model"
+	"github.com/vs-ude/btml/internal/structs"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -46,7 +46,7 @@ func (me *Me) LaggingPeersLoop() {
 	defer me.Wg.Done()
 
 	wg := &sync.WaitGroup{}
-	var data *model.Weights
+	var data *structs.Weights
 	var err error
 	timer := time.NewTimer(time.Second)
 	wait := time.Duration(time.Second * 5)
@@ -76,7 +76,7 @@ func (me *Me) LaggingPeersLoop() {
 	}
 }
 
-func marshalUpdate(data *model.Weights, source string) ([]byte, error) {
+func marshalUpdate(data *structs.Weights, source string) ([]byte, error) {
 	// Create and marshal the model update
 	update := &ModelUpdate{
 		Source:  source,

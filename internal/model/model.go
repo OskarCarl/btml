@@ -11,11 +11,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/vs-ude/btml/internal/structs"
 	"github.com/vs-ude/btml/internal/telemetry"
 	grpc "google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 )
+
+type lossHistoryItem struct {
+	age  int
+	loss float32
+}
 
 // Model represents a model instance. All actions are executed in series.
 type Model struct {
@@ -23,7 +29,9 @@ type Model struct {
 	client                *ModelClient
 	age                   int
 	lastEval              int
-	modelModifiedCallback func(*Weights)
+	trainLossHistory      []lossHistoryItem
+	evalLossHistory       []lossHistoryItem
+	modelModifiedCallback func(*structs.Weights)
 	telemetry             *telemetry.Client
 	sync.Mutex
 }
@@ -36,74 +44,99 @@ func (m *Model) Shutdown() {
 
 // Eval evaluates the model and logs the results. It blocks until other
 // operations are completed.
-func (m *Model) Eval() error {
+// Unless an error occurred, it returns the change in loss from the last
+// evaluation.
+func (m *Model) Eval() (change float32, err error) {
 	checkpointPath := fmt.Sprintf("%s/%d", m.checkpointBase, m.age)
 	m.Lock()
 	defer m.Unlock()
-	met, err := m.client.Eval(checkpointPath)
+	var met *metrics
+	met, err = m.client.Eval(checkpointPath)
 	if err != nil {
-		return fmt.Errorf("failed to evaluate model: %w", err)
+		err = fmt.Errorf("failed to evaluate model: %w", err)
+		return
 	}
 	slog.Info("Evaluated model", "accuracy", met.acc, "loss", met.loss)
 	if m.telemetry != nil {
 		go m.telemetry.RecordEvaluation(met.acc, met.loss, met.guesses, m.age)
 	}
-	return nil
+	if len(m.evalLossHistory) > 0 {
+		prev := m.evalLossHistory[len(m.evalLossHistory)-1]
+		change = met.loss - prev.loss // TODO should this be weighted and/or normalized?
+	}
+	m.evalLossHistory = append(m.evalLossHistory, lossHistoryItem{age: m.age, loss: met.loss})
+	m.lastEval = m.age
+	return
 }
 
-// Train trains the model and logs the results. It blocks until other
+// Train the model and logs the results. It blocks until other
 // operations are completed.
-func (m *Model) Train() error {
+// Unless an error occurred, it returns the change in loss from the last
+// training/apply action.
+func (m *Model) Train() (change float32, err error) {
 	m.Lock()
 	defer m.Unlock()
-	met, err := m.client.Train()
+	var met *metrics
+	met, err = m.client.Train()
 	if err != nil {
-		return fmt.Errorf("failed to train model: %w", err)
+		err = fmt.Errorf("failed to train model: %w", err)
 	}
 	m.age++
 	slog.Info("Trained model", "age", m.age, "loss", met.loss)
 	if m.telemetry != nil {
 		go m.telemetry.RecordTraining(met.loss, m.age)
 	}
+	m.trainLossHistory = append(m.trainLossHistory, lossHistoryItem{age: m.age, loss: met.loss})
 	m.executeCallback()
-	return nil
+	return
 }
 
-// Apply applies the given weights to the model, does a short training run, and
+// Apply the given weights to the model. Does a short training run, and
 // logs the results. It blocks until other operations are completed.
-func (m *Model) Apply(weights *Weights) error {
+// Unless an error occurred, it returns the change in loss from the last
+// training/apply action weighted by the ratio of age between the existing
+// model and the incoming weights.
+func (m *Model) Apply(weights *structs.Weights) (change float32, err error) {
 	m.Lock()
 	defer m.Unlock()
 	ratio := getRatio(m, weights)
-	if err := m.client.Apply(weights, ratio); err != nil {
-		return fmt.Errorf("failed to apply weights to model: %w", err)
+	if err = m.client.Apply(weights, ratio); err != nil {
+		err = fmt.Errorf("failed to apply weights to model: %w", err)
+		return
 	}
-	if m.telemetry != nil {
-		go m.telemetry.RecordWeightApplication(m.age, weights.GetAge())
-	}
-	met, err := m.client.Train()
+	var met *metrics
+	met, err = m.client.Train()
 	if err != nil {
-		return fmt.Errorf("failed to train model: %w", err)
+		err = fmt.Errorf("failed to train model: %w", err)
+		return
 	}
+	old_age := m.age
 	m.age = max(m.age, weights.GetAge()) + 1
-	if m.telemetry != nil {
-		go m.telemetry.RecordTraining(met.loss, m.age)
-	}
 	slog.Info("Applied weights to model", "age", m.age, "loss", met.loss)
 	m.executeCallback()
-	return nil
+
+	if len(m.trainLossHistory) > 0 {
+		prev := m.trainLossHistory[len(m.trainLossHistory)-1]
+		change = ratio * (met.loss - prev.loss) // TODO should this be weighted differently and/or normalized?
+	}
+	m.trainLossHistory = append(m.trainLossHistory, lossHistoryItem{age: m.age, loss: met.loss})
+
+	if m.telemetry != nil {
+		go m.telemetry.RecordWeightApplication(old_age, weights.GetAge(), change)
+	}
+	return
 }
 
 // GetWeights fetches the weights from the model and returns them. It blocks
 // until other operations are completed.
-func (m *Model) GetWeights() (*Weights, error) {
+func (m *Model) GetWeights() (*structs.Weights, error) {
 	m.Lock()
 	defer m.Unlock()
 	return m.getWeights()
 }
 
 // getWeights assumes that the model is locked.
-func (m *Model) getWeights() (*Weights, error) {
+func (m *Model) getWeights() (*structs.Weights, error) {
 	w, err := m.client.GetWeights()
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch weights from model: %w", err)
@@ -164,7 +197,7 @@ func NewModel(c *Config, telemetry *telemetry.Client) (*Model, error) {
 	}, nil
 }
 
-func (m *Model) SetCallback(callback func(*Weights)) {
+func (m *Model) SetCallback(callback func(*structs.Weights)) {
 	m.modelModifiedCallback = callback
 }
 
@@ -223,7 +256,7 @@ func resolveLogPath(c *Config) (string, error) {
 }
 
 // getRatio calculates the ratio of the model's own age as used by the Python model.
-func getRatio(m *Model, weights *Weights) float32 {
+func getRatio(m *Model, weights *structs.Weights) float32 {
 	ratio := float32(weights.GetAge()) / (float32(m.age) + float32(weights.GetAge()))
 	return ratio
 }

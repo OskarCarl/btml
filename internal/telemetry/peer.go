@@ -62,3 +62,22 @@ func (c *Client) RecordActivePeers(peers []string) {
 		log_w(err)
 	}
 }
+
+func (c *Client) RecordScoreChange(peer string, score int) {
+	point := influxdb3.NewPoint(
+		fmt.Sprintf("peer_score_%s", c.run),
+		c.tags,
+		map[string]any{
+			"id":    c.name,
+			"peer":  peer,
+			"score": score,
+		},
+		time.Now(),
+	)
+
+	log("peer_score")
+	err := c.client.WritePoints(c.ctx, []*influxdb3.Point{point})
+	if err != nil {
+		log_w(err)
+	}
+}

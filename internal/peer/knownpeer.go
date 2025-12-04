@@ -60,6 +60,9 @@ func (kp *KnownPeer) UpdateScore(change int) {
 			slog.Warn("error during score update propagation", "error", err)
 		}
 	}
+	if kp.telemetry != nil {
+		kp.telemetry.RecordScoreChange(kp.Name, int(kp.score))
+	}
 }
 
 func (kp *KnownPeer) GetScore() trust.Score {

@@ -7,20 +7,20 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/vs-ude/btml/internal/model"
+	"github.com/vs-ude/btml/internal/structs"
 )
 
 type StorageStrategy interface {
-	Decide(*KnownPeer, *model.Weights) (bool, error)
-	Store(model.Weights)
-	Retrieve(min int) (*model.Weights, error)
+	Decide(*KnownPeer, *structs.Weights) (bool, error)
+	Store(structs.Weights)
+	Retrieve(min int) (*structs.Weights, error)
 }
 
 // This strategy attempts to only serve updates that are at most double the age
 // of the given min. There is some leeway in this due to the probability of
 // gaps in the stored updates.
 type DoubleAgeStorage struct {
-	storage     map[int]*model.Weights
+	storage     map[int]*structs.Weights
 	steps       []int
 	stepSizeCap int
 	currentMax  int
@@ -31,7 +31,7 @@ type DoubleAgeStorage struct {
 
 func NewDoubleAgeStorage(lastN int, stepSizeCap int) *DoubleAgeStorage {
 	return &DoubleAgeStorage{
-		storage:     make(map[int]*model.Weights),
+		storage:     make(map[int]*structs.Weights),
 		steps:       make([]int, 0),
 		stepSizeCap: stepSizeCap,
 		currentMax:  0,
@@ -40,7 +40,7 @@ func NewDoubleAgeStorage(lastN int, stepSizeCap int) *DoubleAgeStorage {
 	}
 }
 
-func (h *DoubleAgeStorage) Decide(p *KnownPeer, w *model.Weights) (bool, error) {
+func (h *DoubleAgeStorage) Decide(p *KnownPeer, w *structs.Weights) (bool, error) {
 	if w.GetAge() > 4 && p.LastSentUpdateAge < (w.GetAge()/2) {
 		return false, nil
 	}
@@ -48,7 +48,7 @@ func (h *DoubleAgeStorage) Decide(p *KnownPeer, w *model.Weights) (bool, error) 
 }
 
 // Store ignores updates that are older than the current maximum age.
-func (h *DoubleAgeStorage) Store(w model.Weights) {
+func (h *DoubleAgeStorage) Store(w structs.Weights) {
 	a := w.GetAge()
 	// Should be strictly increasing anyway
 	if a < h.currentMax {
@@ -59,7 +59,7 @@ func (h *DoubleAgeStorage) Store(w model.Weights) {
 	defer h.Unlock()
 
 	if a >= h.nextStep {
-		oldW, ok := h.last.Value.(*model.Weights)
+		oldW, ok := h.last.Value.(*structs.Weights)
 		if ok && oldIsCloser(oldW.GetAge(), h.nextStep, a) {
 			h.steps = append(h.steps, oldW.GetAge())
 			h.storage[oldW.GetAge()] = oldW
@@ -89,7 +89,7 @@ func (h *DoubleAgeStorage) progressStep(c int) {
 }
 
 // Retrieve retrieves the last stored weights.
-func (h *DoubleAgeStorage) Retrieve(min int) (*model.Weights, error) {
+func (h *DoubleAgeStorage) Retrieve(min int) (*structs.Weights, error) {
 	if min >= h.currentMax {
 		return nil, errors.New("already up to date")
 	}
@@ -100,11 +100,11 @@ func (h *DoubleAgeStorage) Retrieve(min int) (*model.Weights, error) {
 	defer h.Unlock()
 
 	candidate := h.getOldest()
-	if candidate != nil && min >= candidate.Value.(*model.Weights).GetAge() {
+	if candidate != nil && min >= candidate.Value.(*structs.Weights).GetAge() {
 		// Search in the ring of most recent updates
 		for candidate.Value != nil {
-			if candidate.Value.(*model.Weights).GetAge() >= min {
-				return candidate.Value.(*model.Weights), nil
+			if candidate.Value.(*structs.Weights).GetAge() >= min {
+				return candidate.Value.(*structs.Weights), nil
 			}
 			if candidate == h.last {
 				break
@@ -132,7 +132,7 @@ func (h *DoubleAgeStorage) Retrieve(min int) (*model.Weights, error) {
 func (h *DoubleAgeStorage) getOldest() *ring.Ring {
 	candidate := h.last.Next()
 	start := candidate
-	for _, ok := candidate.Value.(*model.Weights); candidate.Value == nil || !ok; {
+	for _, ok := candidate.Value.(*structs.Weights); candidate.Value == nil || !ok; {
 		candidate = candidate.Next()
 		if candidate == start {
 			return nil
@@ -151,7 +151,7 @@ func (h *DoubleAgeStorage) String() string {
 		cur := h.last
 		end := cur
 		for cur.Value != nil {
-			ring = fmt.Sprintf(" %d%s", cur.Value.(*model.Weights).GetAge(), ring)
+			ring = fmt.Sprintf(" %d%s", cur.Value.(*structs.Weights).GetAge(), ring)
 			cur = cur.Prev()
 			if cur == end {
 				break

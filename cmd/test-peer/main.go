@@ -77,7 +77,7 @@ func run(c *peer.Config, ps *peer.PeerSet) int {
 
 func dummySend(p *peer.Me) {
 	for i := range 100 {
-		w := &model.Weights{}
+		w := &structs.Weights{}
 		w.SetAge(i)
 		p.Send(w)
 		time.Sleep(time.Second * 10)
@@ -105,7 +105,7 @@ func manualPeerSet(list string) *peer.PeerSet {
 type DummyStrategy struct{}
 
 func (d *DummyStrategy) SetModel(m *model.Model) {}
-func (d *DummyStrategy) Start(wc <-chan *model.Weights) error {
+func (d *DummyStrategy) Start(wc <-chan *model.WeightsWithCallback) error {
 	go func() {
 		for w := range wc {
 			slog.Info("Received message", "age", w.GetAge())

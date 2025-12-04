@@ -3,7 +3,7 @@ package peer
 import (
 	"testing"
 
-	"github.com/vs-ude/btml/internal/model"
+	"github.com/vs-ude/btml/internal/structs"
 )
 
 func TestDoubleAgeStorageLast(t *testing.T) {
@@ -78,7 +78,7 @@ func prepareDoubleAgeStorage() StorageStrategy {
 	d := NewDoubleAgeStorage(3, 6)
 
 	for a := range 22 {
-		d.Store(*model.NewWeights(make([]byte, 0), a))
+		d.Store(*structs.NewWeights(make([]byte, 0), a))
 	}
 
 	return d
@@ -88,7 +88,7 @@ func preparePartialDoubleAgeStorage() StorageStrategy {
 	d := NewDoubleAgeStorage(3, 6)
 
 	for a := range 3 {
-		d.Store(*model.NewWeights(make([]byte, 0), a))
+		d.Store(*structs.NewWeights(make([]byte, 0), a))
 	}
 
 	return d

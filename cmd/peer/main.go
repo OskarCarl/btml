@@ -16,6 +16,7 @@ import (
 	"github.com/vs-ude/btml/internal/model"
 	"github.com/vs-ude/btml/internal/peer"
 	"github.com/vs-ude/btml/internal/play"
+	"github.com/vs-ude/btml/internal/structs"
 	"github.com/vs-ude/btml/internal/telemetry"
 )
 
@@ -95,11 +96,12 @@ func run(c *peer.Config, t *telemetry.Client) int {
 	me := peer.Start(c, m, t)
 	defer me.Shutdown()
 
-	strategy := model.NewNaiveStrategy(m)
+	var strategy model.ApplyStrategy
+	strategy = model.NewSimpleActionStrategy(m, 0.005)
 	ch, _ := me.ListenForWeights()
 	strategy.Start(ch)
 
-	m.SetCallback(func(weights *model.Weights) {
+	m.SetCallback(func(weights *structs.Weights) {
 		i, _ := rand.Int(rand.Reader, big.NewInt(100))
 		if i.Cmp(big.NewInt(80)) < 0 {
 			return

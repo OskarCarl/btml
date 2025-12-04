@@ -34,7 +34,7 @@ func main() {
 	defer m.Shutdown()
 
 	// Train the model
-	if err := m.Train(); err != nil {
+	if _, err := m.Train(); err != nil {
 		slog.Error("Failed to train model", "error", err)
 		os.Exit(1)
 	}
@@ -47,19 +47,19 @@ func main() {
 	}
 
 	// Evaluate the model
-	if err := m.Eval(); err != nil {
+	if _, err := m.Eval(); err != nil {
 		slog.Error("Failed to evaluate model", "error", err)
 		os.Exit(1)
 	}
 
 	// Apply weights back
-	if err := m.Apply(weights); err != nil {
+	if _, err := m.Apply(weights); err != nil {
 		slog.Error("Failed to apply weights", "error", err)
 		os.Exit(1)
 	}
 
 	// Evaluate the model
-	if err := m.Eval(); err != nil {
+	if _, err := m.Eval(); err != nil {
 		slog.Error("Failed to evaluate model", "error", err)
 		os.Exit(1)
 	}

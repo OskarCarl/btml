@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/vs-ude/btml/internal/structs"
 	grpc "google.golang.org/grpc"
 )
 
@@ -32,7 +33,7 @@ func (c *ModelClient) Close() error {
 	return nil
 }
 
-func (c *ModelClient) Train() (*Metrics, error) {
+func (c *ModelClient) Train() (*metrics, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	res, err := c.trainClient.Train(ctx, &TrainRequest{})
@@ -42,10 +43,10 @@ func (c *ModelClient) Train() (*Metrics, error) {
 	if !res.Success {
 		return nil, fmt.Errorf("train request failed: %s", res.ErrorMessage)
 	}
-	return NewMetrics(-1, res.Loss, nil)
+	return newMetrics(-1, res.Loss, nil)
 }
 
-func (c *ModelClient) Eval(checkpointPath string) (*Metrics, error) {
+func (c *ModelClient) Eval(checkpointPath string) (*metrics, error) {
 	req := &EvalRequest{
 		Path: checkpointPath,
 	}
@@ -59,10 +60,10 @@ func (c *ModelClient) Eval(checkpointPath string) (*Metrics, error) {
 	if !res.Success {
 		return nil, fmt.Errorf("eval request failed: %s", res.ErrorMessage)
 	}
-	return NewMetrics(res.Accuracy, res.Loss, res.Guesses)
+	return newMetrics(res.Accuracy, res.Loss, res.Guesses)
 }
 
-func (c *ModelClient) Apply(weights *Weights, ratio float32) error {
+func (c *ModelClient) Apply(weights *structs.Weights, ratio float32) error {
 	req := &ImportRequest{
 		Weights:     weights.Get(),
 		WeightRatio: ratio,
@@ -80,7 +81,7 @@ func (c *ModelClient) Apply(weights *Weights, ratio float32) error {
 	return nil
 }
 
-func (c *ModelClient) GetWeights() (*Weights, error) {
+func (c *ModelClient) GetWeights() (*structs.Weights, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	res, err := c.exportWeightsClient.ExportWeights(ctx, &ExportRequest{})
@@ -90,5 +91,5 @@ func (c *ModelClient) GetWeights() (*Weights, error) {
 	if !res.Success {
 		return nil, fmt.Errorf("export weights request failed: %s", res.ErrorMessage)
 	}
-	return NewWeights(res.Weights, -1), nil
+	return structs.NewWeights(res.Weights, -1), nil
 }
